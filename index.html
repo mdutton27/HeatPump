@@ -202,6 +202,30 @@
     line-height: 1;
   }
   .bill-item-remove:hover { color: var(--warn); }
+  .bill-item-actions { display: flex; gap: 6px; align-items: center; }
+  .bill-retry-btn {
+    background: var(--accent); color: #fff; border: none; border-radius: 6px;
+    padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer;
+    letter-spacing: 0.3px;
+  }
+  .bill-retry-btn:hover { background: #1b4332; }
+  .bill-manual-btn {
+    background: none; color: var(--accent); border: 1px solid var(--accent); border-radius: 6px;
+    padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer;
+  }
+  .bill-manual-btn:hover { background: var(--accent-light); }
+  .bill-inline-form {
+    padding: 12px 14px; background: var(--paper); border-radius: 0 0 8px 8px;
+    margin-top: -4px; border: 1px solid #ddd; border-top: 1px dashed #ccc;
+  }
+  .bill-inline-form .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .bill-inline-form label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink2); display: block; margin-bottom: 3px; }
+  .bill-inline-form input { width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }
+  .bill-inline-form .bill-save-btn {
+    margin-top: 10px; background: var(--accent); color: #fff; border: none;
+    border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .bill-inline-form .bill-save-btn:hover { background: #1b4332; }
 
   /* EXTRACTED DATA */
   .extracted-data {
@@ -1313,18 +1337,119 @@ function handleFiles(files) {
 function renderBillList() {
   const list = document.getElementById('billList');
   if (state.bills.length === 0) { list.innerHTML = ''; return; }
-  list.innerHTML = state.bills.map((b, i) => `
-    <div class="bill-item" id="bill-${i}">
-      <div class="bill-item-icon">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="#2d6a4f"><path d="M4 1h6l4 4v10H4V1z"/><path d="M10 1v4h4" fill="none" stroke="#2d6a4f" stroke-width="1.5"/></svg>
+  list.innerHTML = state.bills.map((b, i) => {
+    const retries = b.retries || 0;
+    const showRetry = b.status === 'error' && retries < 2;
+    const showManualFallback = b.status === 'error' && retries >= 2;
+    const showManualOption = b.status === 'error';
+    const showInlineForm = b.status === 'manual-entry';
+
+    let statusHtml = '';
+    if (b.status === 'pending') statusHtml = 'Queued';
+    else if (b.status === 'processing') statusHtml = 'Reading...';
+    else if (b.status === 'done') statusHtml = '✓ Extracted';
+    else if (b.status === 'manual-entry') statusHtml = '✏️ Enter details';
+    else if (b.status === 'manual-done') statusHtml = '✓ Entered manually';
+    else statusHtml = '⚠ Could not read' + (retries > 0 ? ` (${retries} retr${retries === 1 ? 'y' : 'ies'})` : '');
+
+    const statusClass = b.status === 'manual-done' ? 'done' : b.status === 'manual-entry' ? 'pending' : b.status;
+
+    let actionsHtml = '';
+    if (b.status === 'error') {
+      actionsHtml = '<div class="bill-item-actions">'
+        + (showRetry ? `<button class="bill-retry-btn" onclick="retryBill(${i})">Retry</button>` : '')
+        + `<button class="bill-manual-btn" onclick="showBillManualEntry(${i})">Enter manually</button>`
+        + '</div>';
+    }
+
+    let formHtml = '';
+    if (showInlineForm) {
+      formHtml = `
+        <div class="bill-inline-form" id="bill-form-${i}">
+          <div class="form-row">
+            <div>
+              <label>Fuel spend this period ($)</label>
+              <input type="number" id="bf-spend-${i}" placeholder="e.g. 285" min="0" step="0.01">
+            </div>
+            <div>
+              <label>Billing period (days)</label>
+              <input type="number" id="bf-days-${i}" placeholder="e.g. 30" min="1" value="30">
+            </div>
+          </div>
+          <div class="form-row" style="margin-top:8px;">
+            <div>
+              <label>Fuel variable rate (¢/kWh)</label>
+              <input type="number" id="bf-rate-${i}" placeholder="e.g. 8.78" min="0" step="0.01">
+            </div>
+            <div>
+              <label>Electricity rate (¢/kWh)</label>
+              <input type="number" id="bf-elec-${i}" placeholder="e.g. 18.78" min="0" step="0.01">
+            </div>
+          </div>
+          <button class="bill-save-btn" onclick="saveBillManualEntry(${i})">Save this bill's data</button>
+        </div>`;
+    }
+
+    return `
+      <div class="bill-item" id="bill-${i}" style="${showInlineForm ? 'border-radius:8px 8px 0 0;' : ''}">
+        <div class="bill-item-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="#2d6a4f"><path d="M4 1h6l4 4v10H4V1z"/><path d="M10 1v4h4" fill="none" stroke="#2d6a4f" stroke-width="1.5"/></svg>
+        </div>
+        <span class="bill-item-name">${b.name}</span>
+        <span class="bill-item-status ${statusClass}" id="bill-status-${i}">${statusHtml}</span>
+        ${actionsHtml}
+        <button class="bill-item-remove" onclick="removeBill(${i})">×</button>
       </div>
-      <span class="bill-item-name">${b.name}</span>
-      <span class="bill-item-status ${b.status}" id="bill-status-${i}">
-        ${b.status === 'pending' ? 'Queued' : b.status === 'processing' ? 'Reading...' : b.status === 'done' ? '✓ Extracted' : '⚠ Manual entry needed'}
-      </span>
-      <button class="bill-item-remove" onclick="removeBill(${i})">×</button>
-    </div>
-  `).join('');
+      ${formHtml}`;
+  }).join('');
+}
+
+function retryBill(i) {
+  const bill = state.bills[i];
+  if (!bill) return;
+  bill.retries = (bill.retries || 0) + 1;
+  bill.status = 'pending';
+  renderBillList();
+  processBill(bill);
+}
+
+function showBillManualEntry(i) {
+  const bill = state.bills[i];
+  if (!bill) return;
+  bill.status = 'manual-entry';
+  renderBillList();
+}
+
+function saveBillManualEntry(i) {
+  const bill = state.bills[i];
+  if (!bill) return;
+
+  const spend = parseFloat(document.getElementById(`bf-spend-${i}`).value);
+  const days = parseInt(document.getElementById(`bf-days-${i}`).value) || 30;
+  const fuelRate = parseFloat(document.getElementById(`bf-rate-${i}`).value);
+  const elecRate = parseFloat(document.getElementById(`bf-elec-${i}`).value);
+
+  if (!spend || spend <= 0) {
+    alert('Please enter the fuel spend for this billing period.');
+    return;
+  }
+
+  const annualised = spend * (365 / days);
+  const manualData = {
+    fuelType: 'gas',
+    annualFuelSpend: Math.round(annualised),
+    monthlyFuelSpend: spend,
+    billingPeriodDays: days,
+    fuelVariableRate: fuelRate || null,
+    elecRatePerKwh: elecRate || null,
+    confidence: 'medium'
+  };
+
+  bill.data = manualData;
+  bill.status = 'manual-done';
+  mergeExtracted(manualData);
+  updateExtractedDisplay();
+  renderBillList();
 }
 
 function removeBill(i) {
