@@ -742,7 +742,7 @@
     <div class="step-header">
       <div class="step-number">Step 1 of 4</div>
       <h2 class="step-title">Your current<br>energy bills</h2>
-      <p class="step-subtitle">Upload PDF bills from Mercury, Contact, or Genesis — or enter your numbers manually.</p>
+      <p class="step-subtitle">Upload a PDF bill from any NZ energy retailer — or enter your numbers manually.</p>
     </div>
 
     <div class="card">
@@ -753,7 +753,7 @@
           <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 2L10 13M10 2L6 6M10 2L14 6M3 14V17H17V14"/></svg>
         </div>
         <div class="upload-label">Drop bills here or click to browse</div>
-        <div class="upload-hint">PDF or image — Mercury, Contact, Genesis, Meridian, Nova all supported</div>
+        <div class="upload-hint">PDF or image — works with all NZ energy retailers</div>
       </div>
       <div class="bill-list" id="billList"></div>
       <div id="processingMsg" style="display:none;" class="processing">
@@ -859,6 +859,19 @@
       <div style="margin-top:10px; padding:10px 12px; background:var(--paper2); border-radius:8px; font-size:13px; color:var(--ink2);" id="hpTypeHint">
         High-temp units (e.g. Stiebel Eltron WPL-A, Vaillant aroTHERM+) reach 75°C — suitable for existing radiators without modification.
       </div>
+      <div class="form-row" style="margin-top:14px;">
+        <div class="form-group">
+          <label>Model</label>
+          <select id="q-model-select">
+            <option value="">Select a model...</option>
+          </select>
+          <span class="hint">Popular models sold in NZ</span>
+        </div>
+      </div>
+      <div id="q-model-other-wrap" class="form-group" style="display:none; margin-top:10px;">
+        <label>Brand / model name</label>
+        <input type="text" id="q-model" placeholder="e.g. Stiebel Eltron WPL-A 10.2">
+      </div>
     </div>
 
     <div class="card">
@@ -881,26 +894,57 @@
           <input type="number" id="q-rebate" placeholder="e.g. 0" min="0" value="0">
           <span class="hint">EECA, council or retailer incentives</span>
         </div>
-        <div class="form-group">
-          <label>Heat pump brand / model</label>
-          <input type="text" id="q-model" placeholder="e.g. Stiebel Eltron WPL-A 10.2">
-        </div>
       </div>
     </div>
 
     <div class="card">
       <div class="card-title">Expected performance</div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>COP (efficiency rating)</label>
-          <input type="number" id="q-cop" placeholder="e.g. 3.8" min="1" max="7" step="0.1" value="3.8">
-          <span class="hint">From spec sheet. Higher = more efficient</span>
+      <div id="seasonalCopSection" style="display:none;">
+        <div class="form-row">
+          <div class="form-group">
+            <label>COP — winter heating (W55)</label>
+            <input type="number" id="q-cop55" placeholder="e.g. 3.2" min="1" max="7" step="0.1">
+            <span class="hint">At 55°C flow temp for radiators</span>
+          </div>
+          <div class="form-group">
+            <label>COP — rest of year (W35)</label>
+            <input type="number" id="q-cop35" placeholder="e.g. 5.0" min="1" max="7" step="0.1">
+            <span class="hint">DHW + low-temp heating</span>
+          </div>
         </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Months using radiator heating</label>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <input type="range" id="q-heating-months" min="1" max="8" value="5" step="1" style="flex:1;">
+              <span id="q-heating-months-val" style="font-weight:600; min-width:50px;">5 mths</span>
+            </div>
+            <span class="hint">May–Sep typical for most of NZ (5 months)</span>
+          </div>
+          <div class="form-group">
+            <label>Blended annual COP</label>
+            <input type="number" id="q-cop" readonly style="background:var(--paper2); font-weight:600;">
+            <span class="hint" id="q-cop-blend-hint">Weighted average based on heating months</span>
+          </div>
+        </div>
+      </div>
+      <div id="simpleCopSection">
+        <div class="form-row">
+          <div class="form-group">
+            <label>COP (efficiency rating)</label>
+            <input type="number" id="q-cop-simple" placeholder="e.g. 4.5" min="1" max="7" step="0.1" value="4.5">
+            <span class="hint">From spec sheet. Higher = more efficient</span>
+          </div>
+        </div>
+      </div>
+      <div class="form-row" style="margin-top:10px;">
         <div class="form-group">
           <label>Estimated annual kWh use</label>
           <input type="number" id="q-kwh" placeholder="e.g. 3238" min="0">
-          <span class="hint">From installer's energy model</span>
+          <span class="hint" id="q-kwh-hint">From installer's energy model</span>
         </div>
+      </div>
+      <div id="kwhEstimate" style="display:none; margin-top:10px; padding:10px 12px; background:var(--accent-light); border-radius:8px; font-size:13px; color:var(--accent);">
       </div>
     </div>
 
@@ -1399,19 +1443,232 @@ document.getElementById('toStep2Btn').addEventListener('click', () => {
   const mFuelType = document.getElementById('m-fuel').value;
   if (mFuelType) state.extracted.fuelType = mFuelType;
   goStep(2);
+  estimateAnnualKwh();
 });
 
 // ═══════════════════════ STEP 2: QUOTE ═══════════════════════
 const hpHints = {
-  'air-water-hightemp': 'High-temp units (e.g. Stiebel Eltron WPL-A, Vaillant aroTHERM+) reach 75°C — suitable for existing radiators without modification. Typical COP: 3.0–4.5.',
-  'air-water-standard': 'Standard units run at 45–60°C — more efficient but may require radiator upgrades. Typical COP: 4.0–5.5. Lower running costs if your rads can handle it.',
-  'air-air': 'Heat pump splits for direct air heating/cooling. Does not replace a hot water cylinder. Most suitable for supplementary heating or replacing electric panel heaters.',
-  'dhw-only': 'Dedicated hot water cylinder heat pumps (e.g. Sanden, Reclaim Energy). Replaces your cylinder only — does not cover space heating.'
+  'air-water-hightemp': 'High-temp units reach 75°C — suitable for existing radiators without modification. Typical COP: 3.0–4.5.',
+  'air-water-standard': 'Standard units run at 45–60°C — more efficient but may require radiator upgrades. Typical COP: 4.0–5.5.',
+  'air-air': 'Heat pump splits for direct air heating/cooling. Does not replace a hot water cylinder. Best for supplementary heating.',
+  'dhw-only': 'Dedicated hot water cylinder heat pumps. Replaces your cylinder only — does not cover space heating.'
 };
 const hpDefaultCop = {
-  'air-water-hightemp': 3.8, 'air-water-standard': 4.8,
-  'air-air': 4.5, 'dhw-only': 3.5
+  'air-water-hightemp': 4.8, 'air-water-standard': 5.0,
+  'air-air': 4.5, 'dhw-only': 4.0
 };
+
+// Model database: popular NZ heat pump models with verified COP ratings
+// Sources: manufacturer spec sheets, EN 14511 / EN 16147 test data
+// cop35 = COP at A7/W35, cop55 = COP at A7/W55 (for radiator operation)
+// Air-to-air: cop = rated heating COP (no W55 distinction)
+// DHW: cop = EN 16147 or manufacturer rated COP
+const hpModels = {
+  'air-water-hightemp': [
+    { name: 'Stiebel Eltron WPL-A 05 HK 230 Premium', cop35: 5.42, cop55: 3.6 },
+    { name: 'Stiebel Eltron WPL-A 07 HK 230 Premium', cop35: 5.42, cop55: 3.6 },
+    { name: 'Stiebel Eltron WPL-A 10.2 Trend HK 230', cop35: 5.40, cop55: 3.8 },
+    { name: 'Vaillant aroTHERM plus VWL 75/6 (4.6kW)', cop35: 4.8, cop55: 3.0 },
+    { name: 'Vaillant aroTHERM plus VWL 105/6 (10.2kW)', cop35: 5.0, cop55: 3.2 },
+    { name: 'Daikin Altherma 3 H HT 16kW', cop35: 5.0, cop55: 3.6 },
+    { name: 'Panasonic Aquarea T-CAP M R290 12kW', cop35: 5.06, cop55: 3.23 },
+    { name: 'Panasonic Aquarea T-CAP M R290 16kW', cop35: 4.89, cop55: 3.20 },
+  ],
+  'air-water-standard': [
+    { name: 'Mitsubishi Ecodan PUZ-WM85VAA (8.5kW)', cop35: 4.80, cop55: 2.82 },
+    { name: 'Mitsubishi Ecodan PUZ-WM112VAA (11.2kW)', cop35: 4.70, cop55: 2.69 },
+    { name: 'Daikin Altherma 3 R (4–8kW)', cop35: 5.15, cop55: 3.10 },
+    { name: 'Daikin Altherma 3 M Monobloc 4kW', cop35: 5.10, cop55: 3.65 },
+    { name: 'Daikin Altherma 3 M Monobloc 6kW', cop35: 4.85, cop55: 3.50 },
+    { name: 'Daikin Altherma 3 M Monobloc 8kW', cop35: 4.60, cop55: 3.50 },
+    { name: 'Panasonic Aquarea T-CAP 9kW R32', cop35: 5.08, cop55: 3.08 },
+    { name: 'Panasonic Aquarea J-Series 5kW R32', cop35: 5.05, cop55: 3.01 },
+    { name: 'Panasonic Aquarea J-Series 9kW R32', cop35: 4.48, cop55: 2.75 },
+    { name: 'Stiebel Eltron WPL-A 05 HK 230 Premium', cop35: 5.42, cop55: 3.6 },
+  ],
+  'air-air': [
+    { name: 'Mitsubishi MSZ-AP25 (2.5kW)', cop: 4.78 },
+    { name: 'Mitsubishi MSZ-AP35 (3.5kW)', cop: 4.57 },
+    { name: 'Mitsubishi MSZ-AP50 (5.0kW)', cop: 3.70 },
+    { name: 'Mitsubishi MSZ-LN25 HyperCore (2.5kW)', cop: 5.33 },
+    { name: 'Daikin Cora FTXM25 (2.5kW)', cop: 4.85 },
+    { name: 'Daikin Cora FTXM50 (5.0kW)', cop: 4.55 },
+    { name: 'Fujitsu ASTG09KMTC Lifestyle (2.5kW)', cop: 4.84 },
+    { name: 'Fujitsu ASTG18KMTC Lifestyle (5.0kW)', cop: 4.50 },
+    { name: 'Panasonic Aero CS-Z25 (2.5kW)', cop: 4.38 },
+    { name: 'Panasonic Aero CS-Z35 (3.5kW)', cop: 4.57 },
+    { name: 'Samsung WindFree AR09 (2.5kW)', cop: 4.32 },
+    { name: 'Samsung WindFree AR12 (3.5kW)', cop: 3.81 },
+  ],
+  'dhw-only': [
+    { name: 'Sanden SANCO2 / Rheem EcoPlus 315L', cop: 4.7 },
+    { name: 'Reclaim Energy CO2 315L', cop: 5.0 },
+    { name: 'Rheem Ambiheat 270L', cop: 4.5 },
+    { name: 'Chromagen Midea 280L', cop: 3.5 },
+    { name: 'Stiebel Eltron WWK 222 (220L)', cop: 2.92 },
+    { name: 'Stiebel Eltron WWK 302 (302L)', cop: 2.91 },
+    { name: 'Panasonic Aquarea DHW CO2', cop: 3.39 },
+  ],
+};
+
+// Boiler efficiency assumptions by fuel type
+const boilerEfficiency = { gas: 0.85, lpg: 0.85, oil: 0.80, electric: 1.0 };
+
+function getModelCopLabel(m) {
+  if (m.cop35 && m.cop55) return m.name + ' — COP ' + m.cop35 + ' (W35) / ' + m.cop55 + ' (W55)';
+  return m.name + ' — COP ' + m.cop;
+}
+
+function getModelEffectiveCop(m) {
+  // If model has seasonal COP data, return the primary display COP
+  if (m.cop35) return m.cop35;
+  return m.cop;
+}
+
+function populateModelDropdown(type) {
+  const sel = document.getElementById('q-model-select');
+  const models = hpModels[type] || [];
+  sel.innerHTML = '<option value="">Select a model...</option>';
+  models.forEach((m, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = getModelCopLabel(m);
+    sel.appendChild(opt);
+  });
+  const otherOpt = document.createElement('option');
+  otherOpt.value = 'other';
+  otherOpt.textContent = 'Other (enter manually)';
+  sel.appendChild(otherOpt);
+  sel.value = '';
+  document.getElementById('q-model-other-wrap').style.display = 'none';
+}
+
+// Whether the current HP type uses seasonal COP (air-to-water types)
+function hasSeasonalCop(type) {
+  return type === 'air-water-hightemp' || type === 'air-water-standard';
+}
+
+function updateBlendedCop() {
+  const cop55 = parseFloat(document.getElementById('q-cop55').value) || 0;
+  const cop35 = parseFloat(document.getElementById('q-cop35').value) || 0;
+  const months = parseInt(document.getElementById('q-heating-months').value) || 5;
+  document.getElementById('q-heating-months-val').textContent = months + ' mth' + (months !== 1 ? 's' : '');
+
+  if (cop55 > 0 && cop35 > 0) {
+    const winterFrac = months / 12;
+    const restFrac = 1 - winterFrac;
+    const blended = (cop55 * winterFrac) + (cop35 * restFrac);
+    document.getElementById('q-cop').value = blended.toFixed(2);
+    document.getElementById('q-cop-blend-hint').textContent =
+      months + ' months at COP ' + cop55 + ' (W55) + ' + (12 - months) + ' months at COP ' + cop35 + ' (W35)';
+  }
+  estimateAnnualKwh(true);
+}
+
+// Get the effective COP from whichever section is active
+function getEffectiveCop() {
+  const hpType = state.quote.hpType;
+  if (hasSeasonalCop(hpType)) {
+    return parseFloat(document.getElementById('q-cop').value) || 0;
+  }
+  return parseFloat(document.getElementById('q-cop-simple').value) || 0;
+}
+
+function showCorrectCopSection(type) {
+  const seasonal = hasSeasonalCop(type);
+  document.getElementById('seasonalCopSection').style.display = seasonal ? 'block' : 'none';
+  document.getElementById('simpleCopSection').style.display = seasonal ? 'none' : 'block';
+}
+
+function estimateAnnualKwh(forceUpdate) {
+  const cop = getEffectiveCop();
+  const annualFuel = state.extracted.annualFuelSpend;
+  const fuelRate = state.extracted.fuelVariableRate; // cents per kWh
+  const fuelType = state.extracted.fuelType || 'gas';
+  const hpType = state.quote.hpType;
+
+  if (!cop || cop <= 0 || !annualFuel || !fuelRate) {
+    document.getElementById('kwhEstimate').style.display = 'none';
+    return;
+  }
+
+  // For DHW-only, only a portion of gas goes to hot water (~35-40%)
+  const dhwFraction = hpType === 'dhw-only' ? 0.38 : 1.0;
+  // For air-to-air, only space heating portion (~60-65%), no DHW
+  const spaceOnlyFraction = hpType === 'air-air' ? 0.62 : 1.0;
+
+  const fraction = hpType === 'dhw-only' ? dhwFraction : spaceOnlyFraction;
+  const relevantSpend = annualFuel * fraction;
+  const fuelKwh = relevantSpend / (fuelRate / 100);
+  const eff = boilerEfficiency[fuelType] || 0.85;
+  const usefulHeat = fuelKwh * eff;
+  const estimatedKwh = Math.round(usefulHeat / cop);
+
+  const el = document.getElementById('kwhEstimate');
+  const kwhInput = document.getElementById('q-kwh');
+
+  if (estimatedKwh > 0 && estimatedKwh < 50000) {
+    let copLabel = 'COP ' + cop.toFixed(1);
+    if (hasSeasonalCop(hpType)) {
+      const months = parseInt(document.getElementById('q-heating-months').value) || 5;
+      copLabel = 'blended COP ' + parseFloat(cop).toFixed(2) + ' (' + months + ' mths at W55)';
+    }
+    el.innerHTML = '<strong>Estimated from your bills:</strong> ~' + estimatedKwh.toLocaleString() + ' kWh/yr'
+      + (hpType === 'dhw-only' ? ' (hot water only, ~38% of gas)' : hpType === 'air-air' ? ' (space heating only, ~62% of gas)' : '')
+      + '<br><span style="font-size:12px; color:var(--ink3);">Based on $' + Math.round(annualFuel).toLocaleString() + '/yr fuel at ' + fuelRate + '¢/kWh, '
+      + Math.round(eff*100) + '% boiler efficiency, ' + copLabel + '</span>';
+    el.style.display = 'block';
+    if (!kwhInput.value || forceUpdate) kwhInput.value = estimatedKwh;
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+document.getElementById('q-model-select').addEventListener('change', function() {
+  const type = state.quote.hpType;
+  const models = hpModels[type] || [];
+  const otherWrap = document.getElementById('q-model-other-wrap');
+
+  if (this.value === 'other') {
+    otherWrap.style.display = 'block';
+    document.getElementById('q-model').value = '';
+    // Show simple COP for manual entry
+    document.getElementById('seasonalCopSection').style.display = 'none';
+    document.getElementById('simpleCopSection').style.display = 'block';
+  } else if (this.value !== '') {
+    const model = models[parseInt(this.value)];
+    if (model) {
+      document.getElementById('q-model').value = model.name;
+      otherWrap.style.display = 'none';
+
+      if (model.cop35 && model.cop55) {
+        // Show seasonal COP section
+        document.getElementById('seasonalCopSection').style.display = 'block';
+        document.getElementById('simpleCopSection').style.display = 'none';
+        document.getElementById('q-cop55').value = model.cop55;
+        document.getElementById('q-cop35').value = model.cop35;
+        updateBlendedCop();
+      } else {
+        // Simple COP model (air-to-air, DHW)
+        document.getElementById('seasonalCopSection').style.display = 'none';
+        document.getElementById('simpleCopSection').style.display = 'block';
+        document.getElementById('q-cop-simple').value = model.cop;
+        document.getElementById('q-cop').value = model.cop;
+        estimateAnnualKwh(true);
+      }
+    }
+  } else {
+    otherWrap.style.display = 'none';
+  }
+});
+
+document.getElementById('q-cop55').addEventListener('input', updateBlendedCop);
+document.getElementById('q-cop35').addEventListener('input', updateBlendedCop);
+document.getElementById('q-heating-months').addEventListener('input', updateBlendedCop);
+document.getElementById('q-cop-simple').addEventListener('input', function() {
+  document.getElementById('q-cop').value = this.value;
+  estimateAnnualKwh();
+});
 
 document.querySelectorAll('#hpTypeControl .seg-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1419,9 +1676,33 @@ document.querySelectorAll('#hpTypeControl .seg-btn').forEach(btn => {
     btn.classList.add('active');
     state.quote.hpType = btn.dataset.value;
     document.getElementById('hpTypeHint').textContent = hpHints[btn.dataset.value];
-    document.getElementById('q-cop').value = hpDefaultCop[btn.dataset.value];
+    document.getElementById('q-kwh').value = '';
+    showCorrectCopSection(btn.dataset.value);
+
+    // Set default COP
+    if (hasSeasonalCop(btn.dataset.value)) {
+      const defCop35 = btn.dataset.value === 'air-water-hightemp' ? 5.0 : 4.8;
+      const defCop55 = btn.dataset.value === 'air-water-hightemp' ? 3.4 : 3.0;
+      document.getElementById('q-cop35').value = defCop35;
+      document.getElementById('q-cop55').value = defCop55;
+      updateBlendedCop();
+    } else {
+      document.getElementById('q-cop-simple').value = hpDefaultCop[btn.dataset.value];
+      document.getElementById('q-cop').value = hpDefaultCop[btn.dataset.value];
+    }
+
+    populateModelDropdown(btn.dataset.value);
+    estimateAnnualKwh();
   });
 });
+
+// Initialize model dropdown and COP section for default type
+populateModelDropdown('air-water-hightemp');
+showCorrectCopSection('air-water-hightemp');
+// Set initial defaults for high-temp
+document.getElementById('q-cop35').value = 5.0;
+document.getElementById('q-cop55').value = 3.4;
+updateBlendedCop();
 
 // ═══════════════════════ STEP 3: SLIDERS ═══════════════════════
 function initSlider(id, valId, suffix) {
