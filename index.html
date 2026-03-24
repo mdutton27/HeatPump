@@ -1167,6 +1167,14 @@
         </div>
         <input type="range" id="r-elecInflate" min="1" max="8" value="3" step="1">
       </div>
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">Months of heating use per year</span>
+          <span class="slider-value" id="r-heatingMonthsVal">12 months</span>
+        </div>
+        <input type="range" id="r-heatingMonths" min="3" max="12" value="12" step="1">
+        <span class="hint" style="margin-top:4px; display:block;">How many months you run your heating system. Reduces both current fuel costs and future heat pump electricity proportionally.</span>
+      </div>
     </div>
 
     <!-- INSTALLER REFERRAL CTA -->
@@ -1324,14 +1332,40 @@ uploadZone.addEventListener('drop', e => {
 });
 billUpload.addEventListener('change', e => handleFiles(e.target.files));
 
+// Sequential bill processing queue to avoid API rate limits (429)
+const billQueue = [];
+let billQueueRunning = false;
+
 function handleFiles(files) {
   Array.from(files).forEach(file => {
     if (state.bills.find(b => b.name === file.name)) return;
     const bill = { name: file.name, file, status: 'pending', data: null };
     state.bills.push(bill);
     renderBillList();
-    processBill(bill);
+    enqueueBill(bill);
   });
+}
+
+function enqueueBill(bill) {
+  billQueue.push(bill);
+  if (!billQueueRunning) runBillQueue();
+}
+
+async function runBillQueue() {
+  billQueueRunning = true;
+  while (billQueue.length > 0) {
+    const bill = billQueue.shift();
+    // Skip if bill was removed or manually entered while queued
+    if (!state.bills.includes(bill) || bill.status === 'manual-done' || bill.status === 'manual-entry') continue;
+    const pending = state.bills.filter(b => b.status === 'pending').length;
+    document.getElementById('processingMsg').style.display = 'flex';
+    document.getElementById('processingText').textContent = `Reading ${bill.name}...` + (pending > 0 ? ` (${pending} more queued)` : '');
+    await processBill(bill);
+    // Brief pause between calls to stay well under rate limits
+    if (billQueue.length > 0) await new Promise(r => setTimeout(r, 1500));
+  }
+  billQueueRunning = false;
+  document.getElementById('processingMsg').style.display = 'none';
 }
 
 function renderBillList() {
@@ -1410,7 +1444,7 @@ function retryBill(i) {
   bill.retries = (bill.retries || 0) + 1;
   bill.status = 'pending';
   renderBillList();
-  processBill(bill);
+  enqueueBill(bill);
 }
 
 function showBillManualEntry(i) {
@@ -1463,15 +1497,13 @@ function removeBill(i) {
 async function processBill(bill) {
   bill.status = 'processing';
   renderBillList();
-  document.getElementById('processingMsg').style.display = 'flex';
-  document.getElementById('processingText').textContent = `Reading ${bill.name}...`;
 
   try {
     const b64 = await fileToBase64(bill.file);
     const isPdf = bill.file.type === 'application/pdf';
     const mediaType = isPdf ? 'application/pdf' : (bill.file.type || 'image/jpeg');
 
-    const prompt = `You are extracting energy billing data from a New Zealand household energy bill. 
+    const prompt = `You are extracting energy billing data from a New Zealand household energy bill.
 Extract ONLY these fields and return ONLY valid JSON (no markdown, no explanation):
 {
   "fuelType": "gas|lpg|oil|electric",
@@ -1516,8 +1548,6 @@ If a field cannot be found, use null. For annualFuelSpend, if you only have a mo
   }
 
   renderBillList();
-  const anyProcessing = state.bills.some(b => b.status === 'processing');
-  if (!anyProcessing) document.getElementById('processingMsg').style.display = 'none';
 }
 
 function mergeExtracted(d) {
@@ -1847,11 +1877,11 @@ initSlider('maintSaving', 'maintVal', '$');
 // ═══════════════════════ CALCULATIONS ═══════════════════════
 function getInputs() {
   // Pull current values from forms
-  const annualFuel = state.extracted.annualFuelSpend
+  const annualFuelRaw = state.extracted.annualFuelSpend
     || parseFloat(document.getElementById('m-annual-fuel').value) || 2850;
   const elecRate = (state.extracted.elecRate
     || parseFloat(document.getElementById('m-elec-rate').value) || 18.78) / 100;
-  const annualKwh = parseFloat(document.getElementById('q-kwh').value) || 3238;
+  const annualKwhRaw = parseFloat(document.getElementById('q-kwh').value) || 3238;
   const plumbing = parseFloat(document.getElementById('q-plumbing').value) || 37932;
   const electrical = parseFloat(document.getElementById('q-electrical').value) || 5000;
   const rebate = parseFloat(document.getElementById('q-rebate').value) || 0;
@@ -1862,9 +1892,16 @@ function getInputs() {
   const modelYears = parseInt(document.getElementById('modelYears').value);
   const discountRate = parseInt(document.getElementById('discountRate').value) / 100;
   const installCost = plumbing + electrical - rebate;
+
+  // Heating months: scale fuel and HP electricity proportionally
+  const heatingMonths = parseInt(document.getElementById('r-heatingMonths')?.value || '12');
+  const heatingFraction = heatingMonths / 12;
+  const annualFuel = annualFuelRaw * heatingFraction;
+  const annualKwh = annualKwhRaw * heatingFraction;
   const annualElecHP = annualKwh * elecRate;
-  return { annualFuel, elecRate, annualKwh, plumbing, electrical, rebate, cop,
-    gasInflate, elecInflate, maintSaving, modelYears, discountRate, installCost, annualElecHP };
+
+  return { annualFuel, annualFuelRaw, elecRate, annualKwh, annualKwhRaw, plumbing, electrical, rebate, cop,
+    gasInflate, elecInflate, maintSaving, modelYears, discountRate, installCost, annualElecHP, heatingMonths };
 }
 
 function runModel(inputs) {
@@ -2046,6 +2083,11 @@ function setupResultSliders() {
   document.getElementById('r-elecInflate').addEventListener('input', function() {
     document.getElementById('r-elecInflateVal').textContent = this.value + '%';
     document.getElementById('elecInflate').value = this.value;
+    rebuildChart();
+  });
+  document.getElementById('r-heatingMonths').addEventListener('input', function() {
+    const v = parseInt(this.value);
+    document.getElementById('r-heatingMonthsVal').textContent = v + (v === 12 ? ' months (year-round)' : ' months');
     rebuildChart();
   });
 }
