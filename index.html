@@ -2066,11 +2066,14 @@ function buildResults() {
   // Scenario table
   scenarioTable(inputs);
 
-  // Result sliders sync
+  // Result sliders sync — preserve current values, don't overwrite user changes
   document.getElementById('r-gasInflate').value = inputs.gasInflate * 100;
   document.getElementById('r-gasInflateVal').textContent = Math.round(inputs.gasInflate * 100) + '%';
   document.getElementById('r-elecInflate').value = inputs.elecInflate * 100;
   document.getElementById('r-elecInflateVal').textContent = Math.round(inputs.elecInflate * 100) + '%';
+  const hm = inputs.heatingMonths;
+  document.getElementById('r-heatingMonths').value = hm;
+  document.getElementById('r-heatingMonthsVal').textContent = hm + (hm === 12 ? ' months (year-round)' : ' months');
 }
 
 // Result page live sliders
