@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heat Pump Payback Calculator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --ink: #1a1a18;
+    --ink2: #4a4a44;
+    --ink3: #8a8a80;
+    --paper: #f5f3ee;
+    --paper2: #eceae3;
+    --paper3: #e2dfd6;
+    --accent: #2d6a4f;
+    --accent2: #40916c;
+    --accent-light: #d8f3dc;
+    --warn: #c1440e;
+    --warn-light: #fde8df;
+    --gold: #b5830a;
+    --gold-light: #fef3cd;
+    --border: rgba(26,26,24,0.12);
+    --radius: 12px;
+    --shadow: 0 2px 16px rgba(26,26,24,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 28px 40px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+  }
+  .header-brand h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px;
+    font-weight: 400;
+    line-height: 1.1;
+    color: var(--paper);
+  }
+  .header-brand p {
+    font-size: 13px;
+    color: rgba(245,243,238,0.55);
+    margin-top: 4px;
+  }
+  .step-indicator {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .step-pip {
+    width: 28px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(245,243,238,0.2);
+    transition: background 0.3s;
+  }
+  .step-pip.active { background: var(--accent2); }
+  .step-pip.done { background: rgba(245,243,238,0.5); }
+
+  /* MAIN */
+  main {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* STEP PANELS */
+  .step-panel { display: none; }
+  .step-panel.active { display: block; }
+
+  .step-header {
+    margin-bottom: 28px;
+  }
+  .step-number {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .step-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 32px;
+    font-weight: 400;
+    line-height: 1.15;
+    color: var(--ink);
+  }
+  .step-subtitle {
+    margin-top: 8px;
+    color: var(--ink2);
+    font-size: 15px;
+  }
+
+  /* CARDS */
+  .card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink3);
+    margin-bottom: 16px;
+  }
+
+  /* UPLOAD AREA */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 36px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--paper2);
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent2);
+    background: var(--accent-light);
+  }
+  .upload-zone input[type=file] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+  .upload-icon {
+    width: 44px;
+    height: 44px;
+    background: var(--ink);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+  }
+  .upload-icon svg { fill: var(--paper); }
+  .upload-label {
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .upload-hint {
+    font-size: 13px;
+    color: var(--ink3);
+  }
+
+  /* BILLS LIST */
+  .bill-list { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .bill-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--paper2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+  .bill-item-icon {
+    width: 32px; height: 32px;
+    background: var(--accent-light);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .bill-item-name { flex: 1; font-weight: 500; color: var(--ink); }
+  .bill-item-status { font-size: 12px; }
+  .bill-item-status.pending { color: var(--ink3); }
+  .bill-item-status.done { color: var(--accent); font-weight: 500; }
+  .bill-item-status.error { color: var(--warn); }
+  .bill-item-remove {
+    background: none; border: none; cursor: pointer;
+    color: var(--ink3); font-size: 16px; padding: 2px 4px;
+    line-height: 1;
+  }
+  .bill-item-remove:hover { color: var(--warn); }
+
+  /* EXTRACTED DATA */
+  .extracted-data {
+    margin-top: 20px;
+    padding: 16px 20px;
+    background: var(--accent-light);
+    border-radius: var(--radius);
+    border: 1px solid rgba(45,106,79,0.15);
+  }
+  .extracted-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  .extracted-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .extracted-item { }
+  .extracted-label { font-size: 12px; color: var(--ink3); margin-bottom: 2px; }
+  .extracted-value { font-size: 18px; font-weight: 600; color: var(--ink); }
+
+  /* MANUAL ENTRY */
+  .manual-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--ink2);
+    cursor: pointer;
+    margin-top: 16px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: white;
+    width: 100%;
+    text-align: left;
+  }
+  .manual-toggle:hover { background: var(--paper2); }
+  .manual-form {
+    margin-top: 12px;
+    display: none;
+  }
+  .manual-form.open { display: block; }
+
+  /* FORM ELEMENTS */
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink2);
+  }
+  .form-group input, .form-group select {
+    height: 42px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+    background: white;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-group input:focus, .form-group select:focus {
+    border-color: var(--accent2);
+    box-shadow: 0 0 0 3px rgba(64,145,108,0.12);
+  }
+  .form-group .hint {
+    font-size: 12px;
+    color: var(--ink3);
+  }
+
+  /* SEGMENTED CONTROL */
+  .seg-control {
+    display: flex;
+    background: var(--paper2);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .seg-btn {
+    flex: 1;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--ink2);
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .seg-btn.active {
+    background: white;
+    color: var(--ink);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(26,26,24,0.1);
+  }
+
+  /* SLIDERS */
+  .slider-group {
+    margin-bottom: 20px;
+  }
+  .slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .slider-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .slider-value {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--accent);
+    font-feature-settings: "tnum";
+  }
+  input[type=range] {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    background: var(--paper3);
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px; height: 20px;
+    background: var(--ink);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid white;
+    box-shadow: 0 1px 6px rgba(26,26,24,0.25);
+  }
+  .slider-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--ink3);
+    margin-top: 4px;
+  }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: none;
+    text-decoration: none;
+  }
+  .btn-primary {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .btn-primary:hover { background: #2d2d2a; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(26,26,24,0.2); }
+  .btn-primary:disabled { background: var(--ink3); transform: none; box-shadow: none; cursor: not-allowed; }
+  .btn-secondary {
+    background: white;
+    color: var(--ink);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--paper2); }
+  .btn-success {
+    background: var(--accent);
+    color: white;
+  }
+  .btn-success:hover { background: var(--accent2); transform: translateY(-1px); }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 28px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  /* PROCESSING SPINNER */
+  .processing {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--gold-light);
+    border-radius: 8px;
+    border: 1px solid rgba(181,131,10,0.2);
+    font-size: 13px;
+    color: var(--gold);
+    font-weight: 500;
+    margin-top: 12px;
+  }
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(181,131,10,0.3);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* METRICS GRID */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .metric-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .metric-label {
+    font-size: 12px;
+    color: var(--ink3);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .metric-value {
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1;
+    font-feature-settings: "tnum";
+  }
+  .metric-value.accent { color: var(--accent); }
+  .metric-value.warn { color: var(--warn); }
+  .metric-sub { font-size: 12px; color: var(--ink3); margin-top: 3px; }
+
+  /* VERDICT BANNER */
+  .verdict-banner {
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    border-left: 4px solid;
+  }
+  .verdict-banner.strong {
+    background: var(--accent-light);
+    border-color: var(--accent);
+  }
+  .verdict-banner.moderate {
+    background: var(--gold-light);
+    border-color: var(--gold);
+  }
+  .verdict-banner.weak {
+    background: var(--warn-light);
+    border-color: var(--warn);
+  }
+  .verdict-banner-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    font-weight: 400;
+    margin-bottom: 6px;
+  }
+  .verdict-banner.strong .verdict-banner-title { color: var(--accent); }
+  .verdict-banner.moderate .verdict-banner-title { color: var(--gold); }
+  .verdict-banner.weak .verdict-banner-title { color: var(--warn); }
+  .verdict-banner-body { font-size: 14px; color: var(--ink2); line-height: 1.6; }
+
+  /* CHART */
+  .chart-container {
+    position: relative;
+    width: 100%;
+    height: 320px;
+    margin-bottom: 8px;
+  }
+  .chart-legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--ink2);
+  }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* SCENARIO TABLE */
+  .scenario-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-top: 8px;
+  }
+  .scenario-table th {
+    text-align: left;
+    padding: 8px 12px;
+    background: var(--paper2);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink3);
+    border-bottom: 1px solid var(--border);
+  }
+  .scenario-table th:not(:first-child) { text-align: right; }
+  .scenario-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--ink);
+  }
+  .scenario-table td:not(:first-child) { text-align: right; font-feature-settings: "tnum"; }
+  .scenario-table tr:last-child td { border-bottom: none; }
+  .scenario-table tr.highlight td { background: var(--accent-light); font-weight: 600; }
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-left: 6px;
+  }
+  .tag-strong { background: var(--accent-light); color: var(--accent); }
+  .tag-moderate { background: var(--gold-light); color: var(--gold); }
+  .tag-weak { background: var(--warn-light); color: var(--warn); }
+
+  /* DISCLAIMER */
+  .disclaimer {
+    font-size: 12px;
+    color: var(--ink3);
+    line-height: 1.6;
+    padding: 14px 16px;
+    background: var(--paper2);
+    border-radius: 8px;
+    margin-top: 20px;
+  }
+
+  /* ALERT */
+  .alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-top: 12px;
+  }
+  .alert-error { background: var(--warn-light); color: var(--warn); border: 1px solid rgba(193,68,14,0.2); }
+  .alert-info { background: var(--gold-light); color: var(--gold); border: 1px solid rgba(181,131,10,0.2); }
+
+  /* PRINT / PDF STYLES */
+  #pdf-report {
+    display: none;
+    font-family: 'DM Sans', sans-serif;
+    padding: 40px;
+    background: white;
+    color: var(--ink);
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    header { padding: 20px 20px; }
+    main { padding: 28px 16px 60px; }
+    .step-title { font-size: 26px; }
+    .metrics-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <h1>Heat Pump<br>Payback Calculator</h1>
+    <p>New Zealand residential heating analysis</p>
+  </div>
+  <div class="step-indicator">
+    <div class="step-pip active" id="pip1"></div>
+    <div class="step-pip" id="pip2"></div>
+    <div class="step-pip" id="pip3"></div>
+    <div class="step-pip" id="pip4"></div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ═══════════════════════════════════ STEP 1: ENERGY BILLS ═══════════════════════════════ -->
+  <div class="step-panel active" id="step1">
+    <div class="step-header">
+      <div class="step-number">Step 1 of 4</div>
+      <h2 class="step-title">Your current<br>energy bills</h2>
+      <p class="step-subtitle">Upload PDF bills from Mercury, Contact, or Genesis — or enter your numbers manually.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Upload bills (PDF)</div>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="billUpload" accept=".pdf,image/*" multiple>
+        <div class="upload-icon">
+          <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 2L10 13M10 2L6 6M10 2L14 6M3 14V17H17V14"/></svg>
+        </div>
+        <div class="upload-label">Drop bills here or click to browse</div>
+        <div class="upload-hint">PDF or image — Mercury, Contact, Genesis, Meridian, Nova all supported</div>
+      </div>
+      <div class="bill-list" id="billList"></div>
+      <div id="processingMsg" style="display:none;" class="processing">
+        <div class="spinner"></div>
+        <span id="processingText">Reading your bills with AI...</span>
+      </div>
+      <div id="extractedData" style="display:none;" class="extracted-data">
+        <div class="extracted-title">Extracted from your bills</div>
+        <div class="extracted-grid">
+          <div class="extracted-item">
+            <div class="extracted-label">Annual gas spend (est.)</div>
+            <div class="extracted-value" id="ext-gas-annual">—</div>
+          </div>
+          <div class="extracted-item">
+            <div class="extracted-label">Gas fixed charge /yr</div>
+            <div class="extracted-value" id="ext-gas-fixed">—</div>
+          </div>
+          <div class="extracted-item">
+            <div class="extracted-label">Gas variable rate</div>
+            <div class="extracted-value" id="ext-gas-rate">—</div>
+          </div>
+          <div class="extracted-item">
+            <div class="extracted-label">Electricity rate</div>
+            <div class="extracted-value" id="ext-elec-rate">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="manual-toggle" id="manualToggle">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm.75 10.5h-1.5v-5h1.5v5zm0-6.5h-1.5V3.5h1.5V5z"/></svg>
+      Enter numbers manually instead
+    </button>
+    <div class="manual-form" id="manualForm">
+      <div class="card" style="margin-top:0; border-top-left-radius:0; border-top-right-radius:0;">
+        <div class="card-title">Current heating system</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fuel type</label>
+            <select id="m-fuel">
+              <option value="gas">Natural gas</option>
+              <option value="lpg">LPG</option>
+              <option value="oil">Oil / diesel</option>
+              <option value="electric">Electric resistance</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Annual fuel spend ($)</label>
+            <input type="number" id="m-annual-fuel" placeholder="e.g. 2850" min="0">
+            <span class="hint">Total inc. fixed charges</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fixed daily charge (¢/day)</label>
+            <input type="number" id="m-fixed-daily" placeholder="e.g. 140" min="0">
+            <span class="hint">Found on your bill</span>
+          </div>
+          <div class="form-group">
+            <label>Variable rate (¢/kWh)</label>
+            <input type="number" id="m-variable-rate" placeholder="e.g. 8.78" min="0" step="0.01">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Electricity rate (¢/kWh)</label>
+            <input type="number" id="m-elec-rate" placeholder="e.g. 18.78" min="0" step="0.01">
+            <span class="hint">Your electricity unit rate</span>
+          </div>
+          <div class="form-group">
+            <label>Annual electricity spend ($)</label>
+            <input type="number" id="m-annual-elec" placeholder="e.g. 1820" min="0">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="toStep2Btn">
+        Continue to your quote
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6 3l5 5-5 5"/></svg>
+      </button>
+      <span style="font-size:13px; color:var(--ink3);">You can edit these numbers later</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════ STEP 2: QUOTE ═══════════════════════════════ -->
+  <div class="step-panel" id="step2">
+    <div class="step-header">
+      <div class="step-number">Step 2 of 4</div>
+      <h2 class="step-title">Your heat pump<br>quote details</h2>
+      <p class="step-subtitle">Enter the key numbers from your installer quote.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">New system type</div>
+      <div class="seg-control" id="hpTypeControl">
+        <button class="seg-btn active" data-value="air-water-hightemp">Air-to-water (high temp)</button>
+        <button class="seg-btn" data-value="air-water-standard">Air-to-water (standard)</button>
+        <button class="seg-btn" data-value="air-air">Air-to-air</button>
+        <button class="seg-btn" data-value="dhw-only">DHW heat pump</button>
+      </div>
+      <div style="margin-top:10px; padding:10px 12px; background:var(--paper2); border-radius:8px; font-size:13px; color:var(--ink2);" id="hpTypeHint">
+        High-temp units (e.g. Stiebel Eltron WPL-A, Vaillant aroTHERM+) reach 75°C — suitable for existing radiators without modification.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Quote costs</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Total quote — plumbing ($)</label>
+          <input type="number" id="q-plumbing" placeholder="e.g. 37932" min="0">
+          <span class="hint">As quoted, incl. GST</span>
+        </div>
+        <div class="form-group">
+          <label>Electrical works ($)</label>
+          <input type="number" id="q-electrical" placeholder="e.g. 5000" min="0">
+          <span class="hint">Separate electrician quote or estimate</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Any grants / rebates ($)</label>
+          <input type="number" id="q-rebate" placeholder="e.g. 0" min="0" value="0">
+          <span class="hint">EECA, council or retailer incentives</span>
+        </div>
+        <div class="form-group">
+          <label>Heat pump brand / model</label>
+          <input type="text" id="q-model" placeholder="e.g. Stiebel Eltron WPL-A 10.2">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Expected performance</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>COP (efficiency rating)</label>
+          <input type="number" id="q-cop" placeholder="e.g. 3.8" min="1" max="7" step="0.1" value="3.8">
+          <span class="hint">From spec sheet. Higher = more efficient</span>
+        </div>
+        <div class="form-group">
+          <label>Estimated annual kWh use</label>
+          <input type="number" id="q-kwh" placeholder="e.g. 3238" min="0">
+          <span class="hint">From installer's energy model</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="goStep(1)">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M10 3L5 8l5 5"/></svg>
+        Back
+      </button>
+      <button class="btn btn-primary" id="toStep3Btn" onclick="goStep(3)">
+        Set inflation assumptions
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6 3l5 5-5 5"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════ STEP 3: ASSUMPTIONS ═══════════════════════════════ -->
+  <div class="step-panel" id="step3">
+    <div class="step-header">
+      <div class="step-number">Step 3 of 4</div>
+      <h2 class="step-title">Inflation &<br>scenario assumptions</h2>
+      <p class="step-subtitle">Adjust to explore optimistic, base case, and pessimistic scenarios. NZ historical data pre-filled.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Energy price inflation</div>
+
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">Gas / fuel price inflation</span>
+          <span class="slider-value" id="gasInflateVal">6% / yr</span>
+        </div>
+        <input type="range" id="gasInflate" min="1" max="15" value="6" step="1">
+        <div class="slider-labels">
+          <span>1% (optimistic)</span>
+          <span>6% (MBIE historical)</span>
+          <span>15% (aggressive)</span>
+        </div>
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">Electricity price inflation</span>
+          <span class="slider-value" id="elecInflateVal">3% / yr</span>
+        </div>
+        <input type="range" id="elecInflate" min="1" max="8" value="3" step="1">
+        <div class="slider-labels">
+          <span>1%</span>
+          <span>3% (NZ historical)</span>
+          <span>8%</span>
+        </div>
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">Annual maintenance saving</span>
+          <span class="slider-value" id="maintVal">$600 / yr</span>
+        </div>
+        <input type="range" id="maintSaving" min="0" max="2000" value="600" step="100">
+        <div class="slider-labels">
+          <span>$0</span>
+          <span>$600 (typical boiler)</span>
+          <span>$2,000</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Model horizon & discount rate</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Years to model</label>
+          <select id="modelYears">
+            <option value="15">15 years</option>
+            <option value="20">20 years</option>
+            <option value="25" selected>25 years</option>
+            <option value="30">30 years</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Discount rate (NPV)</label>
+          <select id="discountRate">
+            <option value="0">0% (nominal)</option>
+            <option value="3" selected>3% (real)</option>
+            <option value="5">5%</option>
+            <option value="7">7%</option>
+          </select>
+          <span class="hint">Adjusts future savings to today's dollars</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="goStep(2)">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M10 3L5 8l5 5"/></svg>
+        Back
+      </button>
+      <button class="btn btn-primary" onclick="buildResults(); goStep(4);">
+        Calculate payback
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6 3l5 5-5 5"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════ STEP 4: RESULTS ═══════════════════════════════ -->
+  <div class="step-panel" id="step4">
+    <div class="step-header">
+      <div class="step-number">Your results</div>
+      <h2 class="step-title" id="results-headline">Payback analysis</h2>
+      <p class="step-subtitle" id="results-subheadline"></p>
+    </div>
+
+    <div id="verdictBanner" class="verdict-banner strong">
+      <div class="verdict-banner-title" id="verdict-title">—</div>
+      <div class="verdict-banner-body" id="verdict-body">—</div>
+    </div>
+
+    <div class="metrics-grid" id="metricsGrid">
+      <div class="metric-card">
+        <div class="metric-label">Payback year</div>
+        <div class="metric-value accent" id="res-payback">—</div>
+        <div class="metric-sub" id="res-payback-sub">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Total install cost</div>
+        <div class="metric-value" id="res-install">—</div>
+        <div class="metric-sub">incl. electrical</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Net annual saving (yr 1)</div>
+        <div class="metric-value accent" id="res-saving-yr1">—</div>
+        <div class="metric-sub">fuel eliminated − new electricity</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">25-yr total saving</div>
+        <div class="metric-value accent" id="res-saving-25">—</div>
+        <div class="metric-sub" id="res-saving-25-sub">vs staying on current fuel</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Fuel cost yr 10</div>
+        <div class="metric-value warn" id="res-fuel-10">—</div>
+        <div class="metric-sub">if you don't convert</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">CO₂ reduction</div>
+        <div class="metric-value accent" id="res-co2">—</div>
+        <div class="metric-sub">kg / year (approx)</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Cumulative cost comparison</div>
+      <div class="chart-legend">
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#c1440e;"></div>
+          Keep current system
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#2d6a4f;"></div>
+          Switch to heat pump
+        </div>
+      </div>
+      <div class="chart-container">
+        <canvas id="resultsChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Scenario comparison</div>
+      <table class="scenario-table" id="scenarioTable">
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th>Gas inflation</th>
+            <th>Payback</th>
+            <th>25-yr saving</th>
+            <th>Verdict</th>
+          </tr>
+        </thead>
+        <tbody id="scenarioBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Adjust assumptions</div>
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">Gas / fuel inflation</span>
+          <span class="slider-value" id="r-gasInflateVal">6%</span>
+        </div>
+        <input type="range" id="r-gasInflate" min="1" max="15" value="6" step="1">
+      </div>
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">Electricity inflation</span>
+          <span class="slider-value" id="r-elecInflateVal">3%</span>
+        </div>
+        <input type="range" id="r-elecInflate" min="1" max="8" value="3" step="1">
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      <strong>Disclaimer:</strong> This calculator provides indicative estimates only, based on your inputs and simplified modelling assumptions. Actual savings will vary depending on energy prices, system performance, usage patterns, and local conditions. This is not financial advice — consult a qualified energy assessor or financial adviser before making investment decisions. CO₂ figures based on MBIE emissions factors for NZ grid electricity and natural gas.
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-success" id="downloadPdfBtn" onclick="downloadPDF()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 2v9M4 7l4 4 4-4M2 13h12"/></svg>
+        Download PDF report
+      </button>
+      <button class="btn btn-secondary" onclick="goStep(1)">
+        Start over
+      </button>
+    </div>
+  </div>
+
+</main>
+
+<!-- Hidden PDF report template -->
+<div id="pdf-report"></div>
+
+<script>
+// ═══════════════════════ STATE ═══════════════════════
+const state = {
+  bills: [],
+  extracted: {
+    annualFuelSpend: null,
+    fuelFixedAnnual: null,
+    fuelVariableRate: null,
+    elecRate: null,
+    fuelType: 'gas'
+  },
+  quote: {
+    plumbing: null,
+    electrical: null,
+    rebate: 0,
+    model: '',
+    cop: 3.8,
+    annualKwh: 3238,
+    hpType: 'air-water-hightemp'
+  },
+  assumptions: {
+    gasInflate: 6,
+    elecInflate: 3,
+    maintSaving: 600,
+    modelYears: 25,
+    discountRate: 3
+  },
+  results: null
+};
+
+let resultsChart = null;
+let currentStep = 1;
+
+// ═══════════════════════ NAVIGATION ═══════════════════════
+function goStep(n) {
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('step' + n).classList.add('active');
+  currentStep = n;
+  [1,2,3,4].forEach(i => {
+    const pip = document.getElementById('pip' + i);
+    pip.classList.remove('active','done');
+    if (i === n) pip.classList.add('active');
+    else if (i < n) pip.classList.add('done');
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ═══════════════════════ STEP 1: BILL UPLOAD ═══════════════════════
+const uploadZone = document.getElementById('uploadZone');
+const billUpload = document.getElementById('billUpload');
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  handleFiles(e.dataTransfer.files);
+});
+billUpload.addEventListener('change', e => handleFiles(e.target.files));
+
+function handleFiles(files) {
+  Array.from(files).forEach(file => {
+    if (state.bills.find(b => b.name === file.name)) return;
+    const bill = { name: file.name, file, status: 'pending', data: null };
+    state.bills.push(bill);
+    renderBillList();
+    processBill(bill);
+  });
+}
+
+function renderBillList() {
+  const list = document.getElementById('billList');
+  if (state.bills.length === 0) { list.innerHTML = ''; return; }
+  list.innerHTML = state.bills.map((b, i) => `
+    <div class="bill-item" id="bill-${i}">
+      <div class="bill-item-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="#2d6a4f"><path d="M4 1h6l4 4v10H4V1z"/><path d="M10 1v4h4" fill="none" stroke="#2d6a4f" stroke-width="1.5"/></svg>
+      </div>
+      <span class="bill-item-name">${b.name}</span>
+      <span class="bill-item-status ${b.status}" id="bill-status-${i}">
+        ${b.status === 'pending' ? 'Queued' : b.status === 'processing' ? 'Reading...' : b.status === 'done' ? '✓ Extracted' : '⚠ Manual entry needed'}
+      </span>
+      <button class="bill-item-remove" onclick="removeBill(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+function removeBill(i) {
+  state.bills.splice(i, 1);
+  renderBillList();
+  if (state.bills.length === 0) {
+    document.getElementById('extractedData').style.display = 'none';
+  }
+}
+
+async function processBill(bill) {
+  bill.status = 'processing';
+  renderBillList();
+  document.getElementById('processingMsg').style.display = 'flex';
+  document.getElementById('processingText').textContent = `Reading ${bill.name}...`;
+
+  try {
+    const b64 = await fileToBase64(bill.file);
+    const isPdf = bill.file.type === 'application/pdf';
+    const mediaType = isPdf ? 'application/pdf' : (bill.file.type || 'image/jpeg');
+
+    const prompt = `You are extracting energy billing data from a New Zealand household energy bill. 
+Extract ONLY these fields and return ONLY valid JSON (no markdown, no explanation):
+{
+  "fuelType": "gas|lpg|oil|electric",
+  "annualFuelSpend": <number or null - total annual fuel spend in NZD, estimate from bill period if needed>,
+  "monthlyFuelSpend": <number or null - this billing period fuel spend>,
+  "fuelFixedDailyCharge": <number or null - daily fixed charge in cents>,
+  "fuelVariableRate": <number or null - variable usage rate in cents per kWh>,
+  "elecRatePerKwh": <number or null - electricity unit rate cents per kWh>,
+  "annualElecSpend": <number or null>,
+  "billingPeriodDays": <number or null>,
+  "retailer": "<string>",
+  "confidence": "high|medium|low"
+}
+If a field cannot be found, use null. For annualFuelSpend, if you only have a monthly/period figure, annualise it.`;
+
+    const msgContent = isPdf
+      ? [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } }, { type: 'text', text: prompt }]
+      : [{ type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } }, { type: 'text', text: prompt }];
+
+    const response = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: msgContent }]
+      })
+    });
+
+    if (!response.ok) throw new Error('API error ' + response.status);
+    const data = await response.json();
+    const text = data.content.find(c => c.type === 'text')?.text || '{}';
+    const clean = text.replace(/```json|```/g, '').trim();
+    const extracted = JSON.parse(clean);
+    bill.data = extracted;
+    bill.status = 'done';
+    mergeExtracted(extracted);
+    updateExtractedDisplay();
+  } catch (err) {
+    console.error(err);
+    bill.status = 'error';
+  }
+
+  renderBillList();
+  const anyProcessing = state.bills.some(b => b.status === 'processing');
+  if (!anyProcessing) document.getElementById('processingMsg').style.display = 'none';
+}
+
+function mergeExtracted(d) {
+  const e = state.extracted;
+  if (d.fuelType) e.fuelType = d.fuelType;
+  if (d.annualFuelSpend && (!e.annualFuelSpend || d.confidence === 'high')) e.annualFuelSpend = d.annualFuelSpend;
+  else if (d.monthlyFuelSpend && !e.annualFuelSpend) e.annualFuelSpend = d.monthlyFuelSpend * 12;
+  if (d.fuelFixedDailyCharge) e.fuelFixedAnnual = (d.fuelFixedDailyCharge / 100) * 365;
+  if (d.fuelVariableRate) e.fuelVariableRate = d.fuelVariableRate;
+  if (d.elecRatePerKwh) e.elecRate = d.elecRatePerKwh;
+}
+
+function updateExtractedDisplay() {
+  const e = state.extracted;
+  const box = document.getElementById('extractedData');
+  if (!e.annualFuelSpend && !e.elecRate) return;
+  box.style.display = 'block';
+  document.getElementById('ext-gas-annual').textContent = e.annualFuelSpend ? '$' + Math.round(e.annualFuelSpend).toLocaleString() : '—';
+  document.getElementById('ext-gas-fixed').textContent = e.fuelFixedAnnual ? '$' + Math.round(e.fuelFixedAnnual) + '/yr' : '—';
+  document.getElementById('ext-gas-rate').textContent = e.fuelVariableRate ? e.fuelVariableRate.toFixed(2) + '¢/kWh' : '—';
+  document.getElementById('ext-elec-rate').textContent = e.elecRate ? e.elecRate.toFixed(2) + '¢/kWh' : '—';
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+// Manual toggle
+document.getElementById('manualToggle').addEventListener('click', () => {
+  document.getElementById('manualForm').classList.toggle('open');
+});
+
+document.getElementById('toStep2Btn').addEventListener('click', () => {
+  // Pull from manual form if filled
+  const mFuel = document.getElementById('m-annual-fuel').value;
+  if (mFuel) state.extracted.annualFuelSpend = parseFloat(mFuel);
+  const mFixed = document.getElementById('m-fixed-daily').value;
+  if (mFixed) state.extracted.fuelFixedAnnual = (parseFloat(mFixed) / 100) * 365;
+  const mVar = document.getElementById('m-variable-rate').value;
+  if (mVar) state.extracted.fuelVariableRate = parseFloat(mVar);
+  const mElec = document.getElementById('m-elec-rate').value;
+  if (mElec) state.extracted.elecRate = parseFloat(mElec);
+  const mFuelType = document.getElementById('m-fuel').value;
+  if (mFuelType) state.extracted.fuelType = mFuelType;
+  goStep(2);
+});
+
+// ═══════════════════════ STEP 2: QUOTE ═══════════════════════
+const hpHints = {
+  'air-water-hightemp': 'High-temp units (e.g. Stiebel Eltron WPL-A, Vaillant aroTHERM+) reach 75°C — suitable for existing radiators without modification. Typical COP: 3.0–4.5.',
+  'air-water-standard': 'Standard units run at 45–60°C — more efficient but may require radiator upgrades. Typical COP: 4.0–5.5. Lower running costs if your rads can handle it.',
+  'air-air': 'Heat pump splits for direct air heating/cooling. Does not replace a hot water cylinder. Most suitable for supplementary heating or replacing electric panel heaters.',
+  'dhw-only': 'Dedicated hot water cylinder heat pumps (e.g. Sanden, Reclaim Energy). Replaces your cylinder only — does not cover space heating.'
+};
+const hpDefaultCop = {
+  'air-water-hightemp': 3.8, 'air-water-standard': 4.8,
+  'air-air': 4.5, 'dhw-only': 3.5
+};
+
+document.querySelectorAll('#hpTypeControl .seg-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#hpTypeControl .seg-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.quote.hpType = btn.dataset.value;
+    document.getElementById('hpTypeHint').textContent = hpHints[btn.dataset.value];
+    document.getElementById('q-cop').value = hpDefaultCop[btn.dataset.value];
+  });
+});
+
+// ═══════════════════════ STEP 3: SLIDERS ═══════════════════════
+function initSlider(id, valId, suffix) {
+  const slider = document.getElementById(id);
+  const val = document.getElementById(valId);
+  const update = () => {
+    const v = parseInt(slider.value);
+    val.textContent = suffix === '%' ? v + '% / yr' : '$' + v.toLocaleString() + ' / yr';
+  };
+  slider.addEventListener('input', update);
+  update();
+}
+initSlider('gasInflate', 'gasInflateVal', '%');
+initSlider('elecInflate', 'elecInflateVal', '%');
+initSlider('maintSaving', 'maintVal', '$');
+
+// ═══════════════════════ CALCULATIONS ═══════════════════════
+function getInputs() {
+  // Pull current values from forms
+  const annualFuel = state.extracted.annualFuelSpend
+    || parseFloat(document.getElementById('m-annual-fuel').value) || 2850;
+  const elecRate = (state.extracted.elecRate
+    || parseFloat(document.getElementById('m-elec-rate').value) || 18.78) / 100;
+  const annualKwh = parseFloat(document.getElementById('q-kwh').value) || 3238;
+  const plumbing = parseFloat(document.getElementById('q-plumbing').value) || 37932;
+  const electrical = parseFloat(document.getElementById('q-electrical').value) || 5000;
+  const rebate = parseFloat(document.getElementById('q-rebate').value) || 0;
+  const cop = parseFloat(document.getElementById('q-cop').value) || 3.8;
+  const gasInflate = parseInt(document.getElementById('gasInflate').value) / 100;
+  const elecInflate = parseInt(document.getElementById('elecInflate').value) / 100;
+  const maintSaving = parseInt(document.getElementById('maintSaving').value);
+  const modelYears = parseInt(document.getElementById('modelYears').value);
+  const discountRate = parseInt(document.getElementById('discountRate').value) / 100;
+  const installCost = plumbing + electrical - rebate;
+  const annualElecHP = annualKwh * elecRate;
+  return { annualFuel, elecRate, annualKwh, plumbing, electrical, rebate, cop,
+    gasInflate, elecInflate, maintSaving, modelYears, discountRate, installCost, annualElecHP };
+}
+
+function runModel(inputs) {
+  const { annualFuel, annualElecHP, gasInflate, elecInflate, maintSaving,
+    modelYears, discountRate, installCost } = inputs;
+
+  const years = Array.from({length: modelYears}, (_, i) => i + 1);
+  const labels = years.map(y => (2026 + y).toString());
+  let gasCum = 0, hpCum = installCost;
+  const gasCumArr = [], hpCumArr = [];
+  const gasAnnualArr = [], hpAnnualArr = [];
+  let paybackYr = null, npvSaving = 0;
+
+  years.forEach(y => {
+    const gasAnnual = annualFuel * Math.pow(1 + gasInflate, y);
+    const elecAnnual = annualElecHP * Math.pow(1 + elecInflate, y);
+    const netSaving = gasAnnual - elecAnnual + maintSaving;
+    const discount = Math.pow(1 + discountRate, y);
+    npvSaving += netSaving / discount;
+    gasCum += gasAnnual;
+    hpCum += elecAnnual;
+    if (paybackYr === null && hpCum <= gasCum) paybackYr = y;
+    gasCumArr.push(Math.round(gasCum));
+    hpCumArr.push(Math.round(hpCum));
+    gasAnnualArr.push(Math.round(gasAnnual));
+    hpAnnualArr.push(Math.round(elecAnnual));
+  });
+
+  const saving25 = (gasCumArr[Math.min(24, modelYears-1)] || 0)
+    - (hpCumArr[Math.min(24, modelYears-1)] || 0);
+  const savingFinal = gasCumArr[modelYears-1] - hpCumArr[modelYears-1];
+  const yr1Saving = (annualFuel - annualElecHP + maintSaving);
+
+  return { labels, gasCumArr, hpCumArr, gasAnnualArr, hpAnnualArr,
+    paybackYr, npvSaving, saving25, savingFinal, yr1Saving,
+    gasYr10: gasAnnualArr[9] || 0, gasYr20: gasAnnualArr[19] || 0 };
+}
+
+function scenarioTable(inputs) {
+  const scenarios = [
+    { label: 'Conservative', gasInflate: 3, elecInflate: 4, tag: 'weak' },
+    { label: 'Base case (MBIE trend)', gasInflate: 6, elecInflate: 3, tag: 'moderate', current: true },
+    { label: 'Moderate', gasInflate: 8, elecInflate: 3, tag: 'strong' },
+    { label: 'High gas inflation', gasInflate: 12, elecInflate: 3, tag: 'strong' },
+  ];
+  const tbody = document.getElementById('scenarioBody');
+  tbody.innerHTML = scenarios.map(s => {
+    const inp = { ...inputs, gasInflate: s.gasInflate/100, elecInflate: s.elecInflate/100 };
+    const r = runModel(inp);
+    const payback = r.paybackYr ? 'Yr ' + r.paybackYr + ' (' + (2026+r.paybackYr) + ')' : '>' + inputs.modelYears + ' yrs';
+    const saving = r.saving25 > 0 ? '$' + Math.round(r.saving25).toLocaleString() : '-$' + Math.round(Math.abs(r.saving25)).toLocaleString();
+    const tagClass = r.paybackYr && r.paybackYr <= 12 ? 'strong' : r.paybackYr && r.paybackYr <= 18 ? 'moderate' : 'weak';
+    const verdictText = r.paybackYr && r.paybackYr <= 12 ? 'Strong' : r.paybackYr && r.paybackYr <= 18 ? 'Reasonable' : 'Marginal';
+    return `<tr ${s.current ? 'class="highlight"' : ''}>
+      <td>${s.label}${s.current ? ' <span style="font-size:11px;color:var(--accent);">★ selected</span>' : ''}</td>
+      <td>${s.gasInflate}% / yr</td>
+      <td>${payback}</td>
+      <td>${saving}</td>
+      <td><span class="tag tag-${tagClass}">${verdictText}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function buildResults() {
+  const inputs = getInputs();
+  const r = runModel(inputs);
+  state.results = { inputs, r };
+
+  // Headline
+  const paybackText = r.paybackYr ? 'Year ' + r.paybackYr + ' (' + (2026 + r.paybackYr) + ')' : 'Beyond ' + inputs.modelYears + ' years';
+  document.getElementById('results-headline').textContent = r.paybackYr && r.paybackYr <= 15
+    ? 'A strong case for switching' : r.paybackYr && r.paybackYr <= 22
+    ? 'A reasonable investment' : 'A long-term commitment';
+  document.getElementById('results-subheadline').textContent =
+    `Based on ${inputs.gasInflate*100}% gas inflation and $${Math.round(inputs.annualFuel).toLocaleString()} current annual fuel spend.`;
+
+  // Verdict
+  const banner = document.getElementById('verdictBanner');
+  banner.className = 'verdict-banner ' + (r.paybackYr && r.paybackYr <= 13 ? 'strong' : r.paybackYr && r.paybackYr <= 20 ? 'moderate' : 'weak');
+  document.getElementById('verdict-title').textContent =
+    r.paybackYr && r.paybackYr <= 13 ? `Payback in ${r.paybackYr} years — compelling case`
+    : r.paybackYr && r.paybackYr <= 20 ? `Payback in ${r.paybackYr} years — reasonable over the system lifetime`
+    : r.paybackYr ? `Payback in ${r.paybackYr} years — financially marginal`
+    : 'No payback within modelled horizon';
+  document.getElementById('verdict-body').textContent =
+    r.paybackYr && r.paybackYr <= 13
+      ? `At ${inputs.gasInflate*100}% annual gas price inflation, the system pays itself back well within its working life. Your annual gas cost reaches $${Math.round(r.gasYr10).toLocaleString()} by year 10 and $${r.gasYr20 ? Math.round(r.gasYr20).toLocaleString() : '—'} by year 20 if you stay on your current fuel — versus roughly $${Math.round(inputs.annualElecHP * Math.pow(1.03,10)).toLocaleString()} in heat pump electricity. The ${inputs.modelYears}-year net saving of $${Math.round(r.savingFinal).toLocaleString()} is substantial.`
+      : `The investment recovers over the system's lifetime, but the margin is sensitive to gas price assumptions. Increasing gas inflation from ${inputs.gasInflate*100}% to 8–10% significantly shortens the payback. Consider this alongside the non-financial benefits: eliminating boiler maintenance, removing gas line charges, and reducing carbon emissions.`;
+
+  // Metrics
+  document.getElementById('res-payback').textContent = r.paybackYr ? 'Yr ' + r.paybackYr : '>'+inputs.modelYears+'yr';
+  document.getElementById('res-payback-sub').textContent = r.paybackYr ? (2026 + r.paybackYr).toString() : 'adjust inflation assumptions';
+  document.getElementById('res-install').textContent = '$' + Math.round(inputs.installCost).toLocaleString();
+  document.getElementById('res-saving-yr1').textContent = '$' + Math.round(r.yr1Saving).toLocaleString() + '/yr';
+  document.getElementById('res-saving-25').textContent = r.saving25 >= 0 ? '$' + Math.round(r.saving25).toLocaleString() : '-$' + Math.round(Math.abs(r.saving25)).toLocaleString();
+  document.getElementById('res-fuel-10').textContent = '$' + Math.round(r.gasYr10).toLocaleString() + '/yr';
+
+  // CO2 (approx)
+  const co2FuelPerKwh = inputs.fuelType === 'gas' ? 0.202 : inputs.fuelType === 'lpg' ? 0.239 : inputs.fuelType === 'oil' ? 0.294 : 0.363;
+  const fuelKwhAnnual = inputs.annualFuel / ((state.extracted.fuelVariableRate || 8.78) / 100);
+  const co2Fuel = fuelKwhAnnual * co2FuelPerKwh;
+  const co2Elec = inputs.annualKwh * 0.136;
+  document.getElementById('res-co2').textContent = Math.round(co2Fuel - co2Elec).toLocaleString() + ' kg';
+
+  // Chart
+  if (resultsChart) resultsChart.destroy();
+  resultsChart = new Chart(document.getElementById('resultsChart'), {
+    type: 'line',
+    data: {
+      labels: r.labels,
+      datasets: [
+        {
+          label: 'Keep current system',
+          data: r.gasCumArr,
+          borderColor: '#c1440e',
+          backgroundColor: 'rgba(193,68,14,0.06)',
+          borderWidth: 2.5,
+          pointRadius: 0,
+          fill: true,
+          tension: 0.3
+        },
+        {
+          label: 'Switch to heat pump',
+          data: r.hpCumArr,
+          borderColor: '#2d6a4f',
+          backgroundColor: 'rgba(45,106,79,0.06)',
+          borderWidth: 2.5,
+          pointRadius: 0,
+          fill: true,
+          tension: 0.3
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.dataset.label + ': $' + ctx.parsed.y.toLocaleString()
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(26,26,24,0.06)' },
+          ticks: { font: { size: 12, family: 'DM Sans' }, color: '#8a8a80', maxTicksLimit: 8, maxRotation: 0 }
+        },
+        y: {
+          grid: { color: 'rgba(26,26,24,0.06)' },
+          ticks: {
+            font: { size: 12, family: 'DM Sans' }, color: '#8a8a80',
+            callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v)
+          }
+        }
+      }
+    }
+  });
+
+  // Scenario table
+  scenarioTable(inputs);
+
+  // Result sliders sync
+  document.getElementById('r-gasInflate').value = inputs.gasInflate * 100;
+  document.getElementById('r-gasInflateVal').textContent = Math.round(inputs.gasInflate * 100) + '%';
+  document.getElementById('r-elecInflate').value = inputs.elecInflate * 100;
+  document.getElementById('r-elecInflateVal').textContent = Math.round(inputs.elecInflate * 100) + '%';
+}
+
+// Result page live sliders
+function setupResultSliders() {
+  document.getElementById('r-gasInflate').addEventListener('input', function() {
+    document.getElementById('r-gasInflateVal').textContent = this.value + '%';
+    document.getElementById('gasInflate').value = this.value;
+    rebuildChart();
+  });
+  document.getElementById('r-elecInflate').addEventListener('input', function() {
+    document.getElementById('r-elecInflateVal').textContent = this.value + '%';
+    document.getElementById('elecInflate').value = this.value;
+    rebuildChart();
+  });
+}
+setupResultSliders();
+
+function rebuildChart() {
+  if (currentStep !== 4) return;
+  buildResults();
+}
+
+// ═══════════════════════ PDF DOWNLOAD ═══════════════════════
+async function downloadPDF() {
+  if (!state.results) return;
+  const { inputs, r } = state.results;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const W = 210, M = 20;
+  let y = 20;
+
+  // Header band
+  doc.setFillColor(26, 26, 24);
+  doc.rect(0, 0, W, 40, 'F');
+  doc.setTextColor(245, 243, 238);
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Heat Pump Payback Report', M, 18);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(180, 175, 160);
+  doc.text('New Zealand residential heating analysis  ·  Generated ' + new Date().toLocaleDateString('en-NZ', { day:'numeric', month:'long', year:'numeric' }), M, 28);
+  doc.text('This report is indicative only and does not constitute financial advice.', M, 35);
+
+  y = 55;
+  doc.setTextColor(26, 26, 24);
+
+  // Verdict
+  const verdictColour = r.paybackYr && r.paybackYr <= 13 ? [45,106,79] : r.paybackYr && r.paybackYr <= 20 ? [181,131,10] : [193,68,14];
+  doc.setFillColor(...verdictColour, 20);
+  doc.setFillColor(235, 248, 240);
+  doc.rect(M, y, W - M*2, 24, 'F');
+  doc.setTextColor(...verdictColour);
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.text(r.paybackYr ? `Payback year ${r.paybackYr} (${2026+r.paybackYr})` : `No payback within ${inputs.modelYears} years`, M+6, y+9);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  const verdictLines = doc.splitTextToSize(document.getElementById('verdict-body').textContent, W - M*2 - 12);
+  doc.text(verdictLines[0] || '', M+6, y+17);
+  y += 32;
+
+  // Key metrics table
+  doc.setTextColor(26,26,24);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Key metrics', M, y);
+  y += 6;
+
+  const metrics = [
+    ['Total install cost', '$' + Math.round(inputs.installCost).toLocaleString()],
+    ['Current annual fuel spend', '$' + Math.round(inputs.annualFuel).toLocaleString()],
+    ['Projected HP electricity (yr 1)', '$' + Math.round(inputs.annualElecHP).toLocaleString()],
+    ['Net annual saving (yr 1)', '$' + Math.round(r.yr1Saving).toLocaleString()],
+    ['Gas inflation assumption', (inputs.gasInflate*100).toFixed(0) + '% / yr'],
+    ['Electricity inflation assumption', (inputs.elecInflate*100).toFixed(0) + '% / yr'],
+    [inputs.modelYears + '-year total saving', (r.savingFinal >= 0 ? '$' : '-$') + Math.round(Math.abs(r.savingFinal)).toLocaleString()],
+    ['Gas cost at year 10', '$' + Math.round(r.gasYr10).toLocaleString() + ' / yr'],
+  ];
+
+  metrics.forEach((row, i) => {
+    const bg = i % 2 === 0 ? [245, 243, 238] : [255, 255, 255];
+    doc.setFillColor(...bg);
+    doc.rect(M, y, W - M*2, 8, 'F');
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 90);
+    doc.text(row[0], M+4, y+5.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(26,26,24);
+    doc.text(row[1], W - M - 4, y+5.5, { align: 'right' });
+    y += 8;
+  });
+  y += 10;
+
+  // Scenario table
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(26,26,24);
+  doc.text('Scenario analysis', M, y);
+  y += 6;
+
+  const scenariosData = [
+    ['Conservative', 3, 4],
+    ['Base case (MBIE)', 6, 3],
+    ['Moderate', 8, 3],
+    ['High gas inflation', 12, 3],
+  ];
+
+  doc.setFillColor(236, 234, 227);
+  doc.rect(M, y, W-M*2, 7, 'F');
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(100,100,90);
+  doc.text('Scenario', M+4, y+5);
+  doc.text('Gas inflation', M+58, y+5);
+  doc.text('Payback', M+95, y+5);
+  doc.text('25-yr saving', W-M-4, y+5, { align:'right' });
+  y += 7;
+
+  scenariosData.forEach((s, i) => {
+    const inp2 = { ...inputs, gasInflate: s[1]/100, elecInflate: s[2]/100 };
+    const r2 = runModel(inp2);
+    const bg = i % 2 === 0 ? [255,255,255] : [245,243,238];
+    doc.setFillColor(...bg);
+    doc.rect(M, y, W-M*2, 8, 'F');
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(26,26,24);
+    doc.text(s[0], M+4, y+5.5);
+    doc.text(s[1] + '% / yr', M+58, y+5.5);
+    doc.text(r2.paybackYr ? 'Year ' + r2.paybackYr : '>25 yr', M+95, y+5.5);
+    const sav = r2.saving25 >= 0 ? '$'+Math.round(r2.saving25).toLocaleString() : '-$'+Math.round(Math.abs(r2.saving25)).toLocaleString();
+    doc.text(sav, W-M-4, y+5.5, { align:'right' });
+    y += 8;
+  });
+
+  y += 12;
+
+  // Disclaimer
+  doc.setFillColor(236,234,227);
+  doc.rect(M, y, W-M*2, 28, 'F');
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(120,120,110);
+  const disclaimer = 'This report provides indicative estimates only, based on user-provided inputs and simplified modelling. Actual savings will vary depending on energy prices, system performance, usage patterns, and local conditions. This is not financial advice. CO₂ figures are based on MBIE emissions factors for NZ grid electricity and natural gas. Consult a qualified energy assessor or financial adviser before making investment decisions.';
+  const dlines = doc.splitTextToSize(disclaimer, W-M*2-8);
+  doc.text(dlines, M+4, y+6);
+
+  // Footer
+  doc.setFillColor(26,26,24);
+  doc.rect(0, 282, W, 15, 'F');
+  doc.setFontSize(8);
+  doc.setTextColor(180,175,160);
+  doc.text('Heat Pump Payback Calculator  ·  nz-heatpump-calc  ·  For indicative purposes only', M, 290);
+  doc.text(new Date().toLocaleDateString('en-NZ'), W-M, 290, { align: 'right' });
+
+  doc.save('heat-pump-payback-report.pdf');
+}
+
+// ═══════════════════════ INIT ═══════════════════════
+goStep(1);
+</script>
+</body>
+</html>
