@@ -1170,10 +1170,10 @@
       <div class="slider-group">
         <div class="slider-header">
           <span class="slider-label">Months of heating use per year</span>
-          <span class="slider-value" id="r-heatingMonthsVal">12 months</span>
+          <span class="slider-value" id="r-heatingMonthsVal">4 months</span>
         </div>
-        <input type="range" id="r-heatingMonths" min="3" max="12" value="12" step="1">
-        <span class="hint" style="margin-top:4px; display:block;">How many months you run your heating system. Reduces both current fuel costs and future heat pump electricity proportionally.</span>
+        <input type="range" id="r-heatingMonths" min="3" max="12" value="4" step="1">
+        <span class="hint" id="r-heatingMonthsHint" style="margin-top:4px; display:block;">Months at high flow temp (W55) for radiators — affects blended COP. Your actual fuel spend stays the same.</span>
       </div>
     </div>
 
@@ -1337,8 +1337,13 @@ const billQueue = [];
 let billQueueRunning = false;
 
 function handleFiles(files) {
-  Array.from(files).forEach(file => {
-    if (state.bills.find(b => b.name === file.name)) return;
+  const fileArr = Array.from(files);
+  console.log(`[Queue] ${fileArr.length} file(s) dropped/selected`);
+  fileArr.forEach(file => {
+    if (state.bills.find(b => b.name === file.name)) {
+      console.log(`[Queue] Skipping duplicate: ${file.name}`);
+      return;
+    }
     const bill = { name: file.name, file, status: 'pending', data: null };
     state.bills.push(bill);
     renderBillList();
@@ -1348,24 +1353,36 @@ function handleFiles(files) {
 
 function enqueueBill(bill) {
   billQueue.push(bill);
+  console.log(`[Queue] Enqueued: ${bill.name} (queue depth: ${billQueue.length}, running: ${billQueueRunning})`);
   if (!billQueueRunning) runBillQueue();
 }
 
 async function runBillQueue() {
   billQueueRunning = true;
+  console.log(`[Queue] Starting queue processor (${billQueue.length} bills)`);
   while (billQueue.length > 0) {
     const bill = billQueue.shift();
     // Skip if bill was removed or manually entered while queued
-    if (!state.bills.includes(bill) || bill.status === 'manual-done' || bill.status === 'manual-entry') continue;
+    if (!state.bills.includes(bill) || bill.status === 'manual-done' || bill.status === 'manual-entry') {
+      console.log(`[Queue] Skipping ${bill.name} (status: ${bill.status})`);
+      continue;
+    }
     const pending = state.bills.filter(b => b.status === 'pending').length;
     document.getElementById('processingMsg').style.display = 'flex';
     document.getElementById('processingText').textContent = `Reading ${bill.name}...` + (pending > 0 ? ` (${pending} more queued)` : '');
     await processBill(bill);
     // Brief pause between calls to stay well under rate limits
-    if (billQueue.length > 0) await new Promise(r => setTimeout(r, 1500));
+    if (billQueue.length > 0) {
+      console.log(`[Queue] Pausing 1.5s before next bill (${billQueue.length} remaining)`);
+      await new Promise(r => setTimeout(r, 1500));
+    }
   }
   billQueueRunning = false;
   document.getElementById('processingMsg').style.display = 'none';
+  const done = state.bills.filter(b => b.status === 'done' || b.status === 'manual-done').length;
+  const failed = state.bills.filter(b => b.status === 'error').length;
+  console.log(`[Queue] Complete — ${done} extracted, ${failed} failed, ${state.bills.length} total`);
+  console.log('[Queue] Final merged state:', JSON.stringify(state.extracted));
 }
 
 function renderBillList() {
@@ -1497,11 +1514,13 @@ function removeBill(i) {
 async function processBill(bill) {
   bill.status = 'processing';
   renderBillList();
+  console.log(`[Bill] Processing: ${bill.name} (${(bill.file.size / 1024).toFixed(1)} KB, ${bill.file.type})`);
 
   try {
     const b64 = await fileToBase64(bill.file);
     const isPdf = bill.file.type === 'application/pdf';
     const mediaType = isPdf ? 'application/pdf' : (bill.file.type || 'image/jpeg');
+    console.log(`[Bill] ${bill.name}: Base64 encoded (${(b64.length / 1024).toFixed(1)} KB), sending to API...`);
 
     const prompt = `You are extracting energy billing data from a New Zealand household energy bill.
 Extract ONLY these fields and return ONLY valid JSON (no markdown, no explanation):
@@ -1523,6 +1542,7 @@ If a field cannot be found, use null. For annualFuelSpend, if you only have a mo
       ? [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } }, { type: 'text', text: prompt }]
       : [{ type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } }, { type: 'text', text: prompt }];
 
+    const t0 = performance.now();
     const response = await fetch('/api/claude', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1532,18 +1552,35 @@ If a field cannot be found, use null. For annualFuelSpend, if you only have a mo
         messages: [{ role: 'user', content: msgContent }]
       })
     });
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
 
-    if (!response.ok) throw new Error('API error ' + response.status);
+    if (!response.ok) {
+      console.error(`[Bill] ${bill.name}: API returned ${response.status} after ${elapsed}s`);
+      throw new Error('API error ' + response.status);
+    }
+    console.log(`[Bill] ${bill.name}: API responded OK in ${elapsed}s`);
+
     const data = await response.json();
     const text = data.content.find(c => c.type === 'text')?.text || '{}';
     const clean = text.replace(/```json|```/g, '').trim();
+    console.log(`[Bill] ${bill.name}: Raw response:`, clean);
+
     const extracted = JSON.parse(clean);
     bill.data = extracted;
     bill.status = 'done';
+
+    console.log(`[Bill] ${bill.name}: ✅ Extracted — retailer: ${extracted.retailer || '?'}, ` +
+      `fuel: $${extracted.annualFuelSpend ?? extracted.monthlyFuelSpend ?? '?'}/` +
+      `${extracted.annualFuelSpend ? 'yr' : 'period'}, ` +
+      `fuelRate: ${extracted.fuelVariableRate ?? '?'}¢/kWh, ` +
+      `elecRate: ${extracted.elecRatePerKwh ?? '?'}¢/kWh, ` +
+      `days: ${extracted.billingPeriodDays ?? '?'}, ` +
+      `confidence: ${extracted.confidence}`);
+
     mergeExtracted(extracted);
     updateExtractedDisplay();
   } catch (err) {
-    console.error(err);
+    console.error(`[Bill] ${bill.name}: ❌ Failed —`, err.message);
     bill.status = 'error';
   }
 
@@ -1552,12 +1589,14 @@ If a field cannot be found, use null. For annualFuelSpend, if you only have a mo
 
 function mergeExtracted(d) {
   const e = state.extracted;
+  const before = JSON.stringify(e);
   if (d.fuelType) e.fuelType = d.fuelType;
   if (d.annualFuelSpend && (!e.annualFuelSpend || d.confidence === 'high')) e.annualFuelSpend = d.annualFuelSpend;
   else if (d.monthlyFuelSpend && !e.annualFuelSpend) e.annualFuelSpend = d.monthlyFuelSpend * 12;
   if (d.fuelFixedDailyCharge) e.fuelFixedAnnual = (d.fuelFixedDailyCharge / 100) * 365;
   if (d.fuelVariableRate) e.fuelVariableRate = d.fuelVariableRate;
   if (d.elecRatePerKwh) e.elecRate = d.elecRatePerKwh;
+  console.log('[Merge] State after merge:', JSON.stringify(e));
 }
 
 function updateExtractedDisplay() {
@@ -1877,15 +1916,13 @@ initSlider('maintSaving', 'maintVal', '$');
 // ═══════════════════════ CALCULATIONS ═══════════════════════
 function getInputs() {
   // Pull current values from forms
-  const annualFuelRaw = state.extracted.annualFuelSpend
+  const annualFuel = state.extracted.annualFuelSpend
     || parseFloat(document.getElementById('m-annual-fuel').value) || 2850;
   const elecRate = (state.extracted.elecRate
     || parseFloat(document.getElementById('m-elec-rate').value) || 18.78) / 100;
-  const annualKwhRaw = parseFloat(document.getElementById('q-kwh').value) || 3238;
   const plumbing = parseFloat(document.getElementById('q-plumbing').value) || 37932;
   const electrical = parseFloat(document.getElementById('q-electrical').value) || 5000;
   const rebate = parseFloat(document.getElementById('q-rebate').value) || 0;
-  const cop = parseFloat(document.getElementById('q-cop').value) || 3.8;
   const gasInflate = parseInt(document.getElementById('gasInflate').value) / 100;
   const elecInflate = parseInt(document.getElementById('elecInflate').value) / 100;
   const maintSaving = parseInt(document.getElementById('maintSaving').value);
@@ -1893,15 +1930,42 @@ function getInputs() {
   const discountRate = parseInt(document.getElementById('discountRate').value) / 100;
   const installCost = plumbing + electrical - rebate;
 
-  // Heating months: scale fuel and HP electricity proportionally
-  const heatingMonths = parseInt(document.getElementById('r-heatingMonths')?.value || '12');
-  const heatingFraction = heatingMonths / 12;
-  const annualFuel = annualFuelRaw * heatingFraction;
-  const annualKwh = annualKwhRaw * heatingFraction;
+  // Heating months slider adjusts the blended COP, NOT the fuel spend.
+  // annualFuel from bills is real — it already reflects actual usage.
+  // COP blending: winter months at W55 (lower COP for radiators),
+  // rest at W35 (higher COP for DHW / low-temp). For air-air/DHW, single COP.
+  const heatingMonths = parseInt(document.getElementById('r-heatingMonths')?.value || '4');
+  const hpType = state.quote.hpType;
+  const isWaterType = hpType === 'air-water-hightemp' || hpType === 'air-water-standard';
+  let cop;
+  if (isWaterType) {
+    const cop55 = parseFloat(document.getElementById('q-cop55').value) || 3.4;
+    const cop35 = parseFloat(document.getElementById('q-cop35').value) || 5.0;
+    const winterFrac = heatingMonths / 12;
+    cop = (cop55 * winterFrac) + (cop35 * (1 - winterFrac));
+  } else {
+    cop = parseFloat(document.getElementById('q-cop-simple')?.value || document.getElementById('q-cop').value) || 3.8;
+  }
+
+  // Recalculate HP kWh from fuel data and blended COP
+  const fuelRate = state.extracted.fuelVariableRate
+    || parseFloat(document.getElementById('m-variable-rate').value) || 8.78;
+  const fuelType = state.extracted.fuelType || 'gas';
+  const boilerEff = ({ gas: 0.85, lpg: 0.85, oil: 0.80, electric: 1.0 })[fuelType] || 0.85;
+  const fuelKwh = annualFuel / (fuelRate / 100);
+  const usefulHeat = fuelKwh * boilerEff;
+
+  // For DHW-only or air-air, only a fraction of gas is replaced
+  let heatFraction = 1.0;
+  if (hpType === 'dhw-only') heatFraction = 0.38;
+  else if (hpType === 'air-air') heatFraction = 0.62;
+
+  const annualKwh = Math.round((usefulHeat * heatFraction) / cop);
   const annualElecHP = annualKwh * elecRate;
 
-  return { annualFuel, annualFuelRaw, elecRate, annualKwh, annualKwhRaw, plumbing, electrical, rebate, cop,
-    gasInflate, elecInflate, maintSaving, modelYears, discountRate, installCost, annualElecHP, heatingMonths };
+  return { annualFuel, elecRate, annualKwh, plumbing, electrical, rebate, cop,
+    gasInflate, elecInflate, maintSaving, modelYears, discountRate, installCost, annualElecHP, heatingMonths,
+    fuelRate, fuelType, hpType, boilerEff, fuelKwh, usefulHeat, heatFraction };
 }
 
 function runModel(inputs) {
@@ -2074,6 +2138,18 @@ function buildResults() {
   const hm = inputs.heatingMonths;
   document.getElementById('r-heatingMonths').value = hm;
   document.getElementById('r-heatingMonthsVal').textContent = hm + (hm === 12 ? ' months (year-round)' : ' months');
+  // Show blended COP in hint
+  const hpType = state.quote.hpType;
+  const hint = document.getElementById('r-heatingMonthsHint');
+  if (hint) {
+    if (hpType === 'air-water-hightemp' || hpType === 'air-water-standard') {
+      const cop55 = parseFloat(document.getElementById('q-cop55').value) || 0;
+      const cop35 = parseFloat(document.getElementById('q-cop35').value) || 0;
+      hint.textContent = `Blended COP: ${inputs.cop.toFixed(2)} — ${hm} months at COP ${cop55} (W55 radiators) + ${12 - hm} months at COP ${cop35} (W35 DHW/low temp)`;
+    } else {
+      hint.textContent = `COP ${inputs.cop.toFixed(1)} — single operating mode`;
+    }
+  }
 }
 
 // Result page live sliders
@@ -2091,6 +2167,12 @@ function setupResultSliders() {
   document.getElementById('r-heatingMonths').addEventListener('input', function() {
     const v = parseInt(this.value);
     document.getElementById('r-heatingMonthsVal').textContent = v + (v === 12 ? ' months (year-round)' : ' months');
+    // Update the blended COP on step 2 to stay in sync
+    const hpType = state.quote.hpType;
+    if (hpType === 'air-water-hightemp' || hpType === 'air-water-standard') {
+      document.getElementById('q-heating-months').value = v;
+      updateBlendedCop();
+    }
     rebuildChart();
   });
 }
