@@ -10,22 +10,22 @@
   @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
 
   :root {
-    --ink: #1a1a18;
-    --ink2: #4a4a44;
-    --ink3: #8a8a80;
-    --paper: #f5f3ee;
-    --paper2: #eceae3;
-    --paper3: #e2dfd6;
-    --accent: #2d6a4f;
-    --accent2: #40916c;
-    --accent-light: #d8f3dc;
+    --ink: #1b2e1f;
+    --ink2: #3d5a42;
+    --ink3: #7a9a7f;
+    --paper: #f2f8f3;
+    --paper2: #e5f0e7;
+    --paper3: #d4e6d7;
+    --accent: #1a7a3a;
+    --accent2: #25a050;
+    --accent-light: #ddf5e3;
     --warn: #c1440e;
     --warn-light: #fde8df;
     --gold: #b5830a;
     --gold-light: #fef3cd;
-    --border: rgba(26,26,24,0.12);
+    --border: rgba(27,46,31,0.12);
     --radius: 12px;
-    --shadow: 0 2px 16px rgba(26,26,24,0.08);
+    --shadow: 0 2px 16px rgba(27,46,31,0.08);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -41,8 +41,8 @@
 
   /* HEADER */
   header {
-    background: var(--ink);
-    color: var(--paper);
+    background: linear-gradient(135deg, #14532d 0%, #166534 50%, #15803d 100%);
+    color: #f0fdf4;
     padding: 28px 40px;
     display: flex;
     align-items: flex-end;
@@ -54,11 +54,11 @@
     font-size: 26px;
     font-weight: 400;
     line-height: 1.1;
-    color: var(--paper);
+    color: #f0fdf4;
   }
   .header-brand p {
     font-size: 13px;
-    color: rgba(245,243,238,0.55);
+    color: rgba(240,253,244,0.6);
     margin-top: 4px;
   }
   .step-indicator {
@@ -70,11 +70,11 @@
     width: 28px;
     height: 4px;
     border-radius: 2px;
-    background: rgba(245,243,238,0.2);
+    background: rgba(240,253,244,0.2);
     transition: background 0.3s;
   }
-  .step-pip.active { background: var(--accent2); }
-  .step-pip.done { background: rgba(245,243,238,0.5); }
+  .step-pip.active { background: #86efac; }
+  .step-pip.done { background: rgba(240,253,244,0.5); }
 
   /* MAIN */
   main {
@@ -155,7 +155,7 @@
   .upload-icon {
     width: 44px;
     height: 44px;
-    background: var(--ink);
+    background: var(--accent);
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -348,11 +348,11 @@
   input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 20px; height: 20px;
-    background: var(--ink);
+    background: var(--accent);
     border-radius: 50%;
     cursor: pointer;
     border: 3px solid white;
-    box-shadow: 0 1px 6px rgba(26,26,24,0.25);
+    box-shadow: 0 1px 6px rgba(26,122,58,0.3);
   }
   .slider-labels {
     display: flex;
@@ -378,10 +378,10 @@
     text-decoration: none;
   }
   .btn-primary {
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--accent);
+    color: white;
   }
-  .btn-primary:hover { background: #2d2d2a; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(26,26,24,0.2); }
+  .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(26,122,58,0.25); }
   .btn-primary:disabled { background: var(--ink3); transform: none; box-shadow: none; cursor: not-allowed; }
   .btn-secondary {
     background: white;
@@ -584,12 +584,139 @@
     color: var(--ink);
   }
 
+  /* SAVE RESULTS */
+  .save-card {
+    background: linear-gradient(135deg, var(--accent-light) 0%, #f0faf4 100%);
+    border: 1px solid rgba(45,106,79,0.2);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-top: 24px;
+  }
+  .save-card-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .save-card-sub {
+    font-size: 14px;
+    color: var(--ink2);
+    margin-bottom: 20px;
+  }
+  .save-form { display: flex; flex-direction: column; gap: 14px; }
+  .save-form-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: end;
+  }
+  .save-form-row .form-group { margin: 0; }
+  .checkbox-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--ink2);
+    cursor: pointer;
+  }
+  .checkbox-group input[type=checkbox] {
+    margin-top: 3px;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    accent-color: var(--accent);
+  }
+  .checkbox-group a { color: var(--accent); }
+  .save-success {
+    display: none;
+    background: var(--accent-light);
+    border: 1px solid rgba(45,106,79,0.2);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-top: 24px;
+  }
+  .save-success-title {
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .save-success-link {
+    font-size: 13px;
+    color: var(--ink2);
+    word-break: break-all;
+  }
+  .save-success-link a {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* INSTALLER CTA */
+  .installer-cta {
+    background: white;
+    border: 2px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-top: 24px;
+  }
+  .installer-cta-badge {
+    display: inline-block;
+    background: var(--accent);
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+  }
+  .installer-cta-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .installer-cta-sub {
+    font-size: 14px;
+    color: var(--ink2);
+    margin-bottom: 20px;
+  }
+  .installer-form { display: flex; flex-direction: column; gap: 14px; }
+  .lead-success {
+    display: none;
+    background: var(--accent-light);
+    border: 1px solid rgba(45,106,79,0.2);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    text-align: center;
+  }
+  .lead-success-title {
+    font-weight: 600;
+    color: var(--accent);
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+  .lead-success-sub { font-size: 13px; color: var(--ink2); }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 24px 40px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--ink3);
+  }
+  footer a { color: var(--ink2); }
+
   /* RESPONSIVE */
   @media (max-width: 600px) {
     header { padding: 20px 20px; }
     main { padding: 28px 16px 60px; }
     .step-title { font-size: 26px; }
     .metrics-grid { grid-template-columns: 1fr 1fr; }
+    .save-form-row { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -927,11 +1054,11 @@
       <div class="card-title">Cumulative cost comparison</div>
       <div class="chart-legend">
         <div class="legend-item">
-          <div class="legend-dot" style="background:#c1440e;"></div>
+          <div class="legend-dot" style="background:#dc2626;"></div>
           Keep current system
         </div>
         <div class="legend-item">
-          <div class="legend-dot" style="background:#2d6a4f;"></div>
+          <div class="legend-dot" style="background:#16a34a;"></div>
           Switch to heat pump
         </div>
       </div>
@@ -974,8 +1101,79 @@
       </div>
     </div>
 
+    <!-- INSTALLER REFERRAL CTA -->
+    <div class="installer-cta" id="installerCta">
+      <div class="installer-cta-badge">Free & no obligation</div>
+      <div class="installer-cta-title">Get quotes from certified installers</div>
+      <div class="installer-cta-sub" id="installerCtaSub">We'll connect you with 2–3 vetted heat pump installers in your area for free, no-obligation quotes.</div>
+      <div class="installer-form" id="installerForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Your name</label>
+            <input type="text" id="lead-name" placeholder="e.g. Jo Smith">
+          </div>
+          <div class="form-group">
+            <label>Phone number</label>
+            <input type="tel" id="lead-phone" placeholder="e.g. 021 123 4567">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Suburb</label>
+            <input type="text" id="lead-suburb" placeholder="e.g. Karori, Wellington">
+          </div>
+          <div class="form-group">
+            <label>Best time to call</label>
+            <select id="lead-time">
+              <option value="morning">Morning (9am–12pm)</option>
+              <option value="afternoon">Afternoon (12–5pm)</option>
+              <option value="evening">Evening (5–7pm)</option>
+              <option value="anytime" selected>Anytime</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-success" id="submitLeadBtn" onclick="submitLead()">
+          Request quotes
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6 3l5 5-5 5"/></svg>
+        </button>
+      </div>
+      <div class="lead-success" id="leadSuccess">
+        <div class="lead-success-title">Quote request submitted</div>
+        <div class="lead-success-sub">We'll be in touch within 1–2 business days to connect you with local installers.</div>
+      </div>
+    </div>
+
     <div class="disclaimer">
       <strong>Disclaimer:</strong> This calculator provides indicative estimates only, based on your inputs and simplified modelling assumptions. Actual savings will vary depending on energy prices, system performance, usage patterns, and local conditions. This is not financial advice — consult a qualified energy assessor or financial adviser before making investment decisions. CO₂ figures based on MBIE emissions factors for NZ grid electricity and natural gas.
+    </div>
+
+    <!-- SAVE YOUR RESULTS -->
+    <div class="save-card" id="saveCard">
+      <div class="save-card-title">Save your results</div>
+      <div class="save-card-sub">Get a private link to return and adjust your assumptions, plus a PDF report emailed to you.</div>
+      <div class="save-form" id="saveForm">
+        <div class="save-form-row">
+          <div class="form-group">
+            <label>Email address</label>
+            <input type="email" id="save-email" placeholder="you@example.co.nz">
+          </div>
+          <button class="btn btn-primary" id="saveBtn" onclick="saveModel()">Save</button>
+        </div>
+        <label class="checkbox-group">
+          <input type="checkbox" id="save-tos" required>
+          <span>I agree to the <a href="/terms" target="_blank">Terms of Service</a> and <a href="/privacy" target="_blank">Privacy Policy</a></span>
+        </label>
+        <label class="checkbox-group">
+          <input type="checkbox" id="save-marketing">
+          <span>I'd like to hear about installer quotes and energy plan offers (optional)</span>
+        </label>
+        <div id="saveError" class="alert alert-error" style="display:none;"></div>
+      </div>
+      <div class="save-success" id="saveSuccess">
+        <div class="save-success-title">Results saved</div>
+        <div class="save-success-link">Your private link: <a id="saveLink" href="#" target="_blank"></a></div>
+        <div style="font-size:13px; color:var(--ink3); margin-top:8px;">Check your email for a copy of the PDF report.</div>
+      </div>
     </div>
 
     <div class="btn-row">
@@ -990,6 +1188,10 @@
   </div>
 
 </main>
+
+<footer>
+  <a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms of Service</a> · Built for NZ homeowners
+</footer>
 
 <!-- Hidden PDF report template -->
 <div id="pdf-report"></div>
@@ -1371,8 +1573,8 @@ function buildResults() {
         {
           label: 'Keep current system',
           data: r.gasCumArr,
-          borderColor: '#c1440e',
-          backgroundColor: 'rgba(193,68,14,0.06)',
+          borderColor: '#dc2626',
+          backgroundColor: 'rgba(220,38,38,0.06)',
           borderWidth: 2.5,
           pointRadius: 0,
           fill: true,
@@ -1381,8 +1583,8 @@ function buildResults() {
         {
           label: 'Switch to heat pump',
           data: r.hpCumArr,
-          borderColor: '#2d6a4f',
-          backgroundColor: 'rgba(45,106,79,0.06)',
+          borderColor: '#16a34a',
+          backgroundColor: 'rgba(22,163,74,0.06)',
           borderWidth: 2.5,
           pointRadius: 0,
           fill: true,
@@ -1459,9 +1661,9 @@ async function downloadPDF() {
   let y = 20;
 
   // Header band
-  doc.setFillColor(26, 26, 24);
+  doc.setFillColor(20, 83, 45);
   doc.rect(0, 0, W, 40, 'F');
-  doc.setTextColor(245, 243, 238);
+  doc.setTextColor(240, 253, 244);
   doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
   doc.text('Heat Pump Payback Report', M, 18);
@@ -1577,7 +1779,7 @@ async function downloadPDF() {
   doc.text(dlines, M+4, y+6);
 
   // Footer
-  doc.setFillColor(26,26,24);
+  doc.setFillColor(20, 83, 45);
   doc.rect(0, 282, W, 15, 'F');
   doc.setFontSize(8);
   doc.setTextColor(180,175,160);
@@ -1587,8 +1789,172 @@ async function downloadPDF() {
   doc.save('heat-pump-payback-report.pdf');
 }
 
+// ═══════════════════════ SAVE MODEL ═══════════════════════
+function getModelState() {
+  return {
+    extracted: { ...state.extracted },
+    quote: {
+      plumbing: parseFloat(document.getElementById('q-plumbing').value) || null,
+      electrical: parseFloat(document.getElementById('q-electrical').value) || null,
+      rebate: parseFloat(document.getElementById('q-rebate').value) || 0,
+      model: document.getElementById('q-model').value,
+      cop: parseFloat(document.getElementById('q-cop').value) || 3.8,
+      annualKwh: parseFloat(document.getElementById('q-kwh').value) || 3238,
+      hpType: state.quote.hpType
+    },
+    assumptions: {
+      gasInflate: parseInt(document.getElementById('gasInflate').value),
+      elecInflate: parseInt(document.getElementById('elecInflate').value),
+      maintSaving: parseInt(document.getElementById('maintSaving').value),
+      modelYears: parseInt(document.getElementById('modelYears').value),
+      discountRate: parseInt(document.getElementById('discountRate').value)
+    },
+    results: state.results ? {
+      paybackYr: state.results.r.paybackYr,
+      saving25: state.results.r.saving25,
+      yr1Saving: state.results.r.yr1Saving,
+      installCost: state.results.inputs.installCost
+    } : null
+  };
+}
+
+async function saveModel() {
+  const email = document.getElementById('save-email').value.trim();
+  const tos = document.getElementById('save-tos').checked;
+  const marketing = document.getElementById('save-marketing').checked;
+  const errEl = document.getElementById('saveError');
+  errEl.style.display = 'none';
+
+  if (!email || !email.includes('@')) {
+    errEl.textContent = 'Please enter a valid email address.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!tos) {
+    errEl.textContent = 'Please agree to the Terms of Service and Privacy Policy to save your results.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  try {
+    const resp = await fetch('/api/save-model', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        tos_accepted: tos,
+        marketing_opt_in: marketing,
+        model_state: getModelState()
+      })
+    });
+    if (!resp.ok) throw new Error('Failed to save');
+    const data = await resp.json();
+
+    document.getElementById('saveForm').style.display = 'none';
+    const successEl = document.getElementById('saveSuccess');
+    successEl.style.display = 'block';
+    const link = window.location.origin + '/model/' + data.share_id;
+    const linkEl = document.getElementById('saveLink');
+    linkEl.href = link;
+    linkEl.textContent = link;
+  } catch (err) {
+    errEl.textContent = 'Something went wrong. Please try again.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Save';
+  }
+}
+
+// ═══════════════════════ INSTALLER LEAD ═══════════════════════
+async function submitLead() {
+  const name = document.getElementById('lead-name').value.trim();
+  const phone = document.getElementById('lead-phone').value.trim();
+  const suburb = document.getElementById('lead-suburb').value.trim();
+  const bestTime = document.getElementById('lead-time').value;
+
+  if (!name || !phone) {
+    alert('Please enter your name and phone number.');
+    return;
+  }
+
+  const btn = document.getElementById('submitLeadBtn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+
+  try {
+    const resp = await fetch('/api/submit-lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        phone,
+        suburb,
+        best_time_to_call: bestTime,
+        model_data: getModelState()
+      })
+    });
+    if (!resp.ok) throw new Error('Failed to submit');
+
+    document.getElementById('installerForm').style.display = 'none';
+    document.getElementById('leadSuccess').style.display = 'block';
+  } catch (err) {
+    alert('Something went wrong. Please try again.');
+    btn.disabled = false;
+    btn.textContent = 'Request quotes';
+  }
+}
+
+// ═══════════════════════ LOAD SAVED MODEL ═══════════════════════
+async function loadSavedModel() {
+  const path = window.location.pathname;
+  const match = path.match(/^\/model\/([a-zA-Z0-9_-]+)$/);
+  if (!match) return;
+
+  try {
+    const resp = await fetch('/api/load-model?id=' + match[1]);
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const m = data.model_state;
+
+    // Restore extracted
+    if (m.extracted) Object.assign(state.extracted, m.extracted);
+    // Restore quote fields
+    if (m.quote) {
+      if (m.quote.plumbing) document.getElementById('q-plumbing').value = m.quote.plumbing;
+      if (m.quote.electrical) document.getElementById('q-electrical').value = m.quote.electrical;
+      if (m.quote.rebate) document.getElementById('q-rebate').value = m.quote.rebate;
+      if (m.quote.model) document.getElementById('q-model').value = m.quote.model;
+      if (m.quote.cop) document.getElementById('q-cop').value = m.quote.cop;
+      if (m.quote.annualKwh) document.getElementById('q-kwh').value = m.quote.annualKwh;
+      if (m.quote.hpType) state.quote.hpType = m.quote.hpType;
+    }
+    // Restore assumptions
+    if (m.assumptions) {
+      document.getElementById('gasInflate').value = m.assumptions.gasInflate;
+      document.getElementById('elecInflate').value = m.assumptions.elecInflate;
+      document.getElementById('maintSaving').value = m.assumptions.maintSaving;
+      document.getElementById('modelYears').value = m.assumptions.modelYears;
+      document.getElementById('discountRate').value = m.assumptions.discountRate;
+    }
+    // Trigger updates and jump to results
+    initSlider('gasInflate', 'gasInflateVal', '%');
+    initSlider('elecInflate', 'elecInflateVal', '%');
+    initSlider('maintSaving', 'maintVal', '$');
+    updateExtractedDisplay();
+    buildResults();
+    goStep(4);
+  } catch (err) {
+    console.error('Failed to load saved model:', err);
+  }
+}
+
 // ═══════════════════════ INIT ═══════════════════════
 goStep(1);
+loadSavedModel();
 </script>
 </body>
 </html>

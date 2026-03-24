@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms of Service - Heat Pump Payback Calculator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --ink: #1b2e1f;
+    --ink2: #3d5a42;
+    --ink3: #7a9a7f;
+    --paper: #f2f8f3;
+    --paper2: #e5f0e7;
+    --accent: #1a7a3a;
+    --accent-light: #ddf5e3;
+    --border: rgba(27,46,31,0.12);
+    --radius: 12px;
+    --shadow: 0 2px 16px rgba(27,46,31,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  header {
+    background: linear-gradient(135deg, #14532d 0%, #166534 50%, #15803d 100%);
+    color: #f0fdf4;
+    padding: 28px 40px;
+  }
+  header a {
+    text-decoration: none;
+    color: inherit;
+  }
+  header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px;
+    font-weight: 400;
+    line-height: 1.1;
+    color: #f0fdf4;
+  }
+  header p {
+    font-size: 13px;
+    color: rgba(240,253,244,0.6);
+    margin-top: 4px;
+  }
+
+  main {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  .page-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 32px;
+    font-weight: 400;
+    line-height: 1.15;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .page-updated {
+    font-size: 13px;
+    color: var(--ink3);
+    margin-bottom: 32px;
+  }
+
+  .card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+
+  h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--ink);
+    margin-bottom: 12px;
+  }
+
+  h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-top: 16px;
+    margin-bottom: 6px;
+  }
+
+  p {
+    margin-bottom: 12px;
+    color: var(--ink2);
+  }
+
+  ul {
+    margin: 8px 0 12px 20px;
+    color: var(--ink2);
+  }
+  ul li {
+    margin-bottom: 4px;
+  }
+
+  .highlight {
+    background: var(--accent-light);
+    border-left: 3px solid var(--accent);
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    margin: 12px 0;
+    font-size: 14px;
+  }
+  .highlight p {
+    margin-bottom: 0;
+  }
+
+  a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  a:hover {
+    color: #14532d;
+  }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 24px 40px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--ink3);
+  }
+  footer a { color: var(--ink2); }
+
+  @media (max-width: 600px) {
+    header { padding: 20px 20px; }
+    main { padding: 28px 16px 60px; }
+    .page-title { font-size: 26px; }
+    .card { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="/">
+    <h1>Heat Pump Payback Calculator</h1>
+    <p>Back to calculator</p>
+  </a>
+</header>
+
+<main>
+  <h1 class="page-title">Terms of Service</h1>
+  <p class="page-updated">Last updated: 24 March 2026</p>
+
+  <div class="card">
+    <h2>About these terms</h2>
+    <p>These terms govern your use of the Heat Pump Payback Calculator ("the calculator", "we", "us"). By using the calculator, you agree to these terms. If you do not agree, please do not use the calculator.</p>
+    <p>We have written these terms in plain language so they are easy to understand.</p>
+  </div>
+
+  <div class="card">
+    <h2>What the calculator does</h2>
+    <p>The calculator provides indicative estimates of potential energy savings and payback periods when switching to a heat pump. It uses data you provide (such as your location, home details, and energy usage) along with publicly available information about energy prices and heat pump performance.</p>
+    <div class="highlight">
+      <p>The calculator is for informational and indicative purposes only. It is not financial advice, energy advice, or a substitute for professional assessment. You should not make purchasing decisions based solely on the calculator's output.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>No warranty on accuracy</h2>
+    <p>While we do our best to provide useful estimates, we make no warranty or guarantee that:</p>
+    <ul>
+      <li>The savings estimates will match your actual experience</li>
+      <li>Energy prices used in calculations are current or will remain stable</li>
+      <li>Heat pump performance figures reflect real-world conditions in your specific home</li>
+      <li>The data extracted from uploaded bills is completely accurate</li>
+      <li>The calculator is free from errors or interruptions</li>
+    </ul>
+    <p>Actual savings depend on many factors we cannot account for, including your home's specific characteristics, how you use heating, future energy prices, installation quality, and weather patterns.</p>
+  </div>
+
+  <div class="card">
+    <h2>Your responsibilities</h2>
+    <p>When using the calculator and any services connected to it, you are responsible for:</p>
+    <ul>
+      <li><strong>Verifying quotes</strong> - if you request quotes from installers, you should compare multiple quotes and check they include everything you need</li>
+      <li><strong>Checking installer credentials</strong> - verify that any installer you engage is appropriately licensed, qualified, and insured. We do not vet or endorse specific installers</li>
+      <li><strong>Providing accurate information</strong> - the quality of your estimate depends on the accuracy of the information you provide</li>
+      <li><strong>Making your own decisions</strong> - the calculator is a starting point for research, not a recommendation to purchase any specific product or service</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Installer connections</h2>
+    <p>If you choose to request quotes, we may connect you with heat pump installers in your area. Please note:</p>
+    <ul>
+      <li>We are not a party to any agreement between you and an installer</li>
+      <li>We do not guarantee the quality, pricing, or reliability of any installer</li>
+      <li>Any contract or agreement you enter with an installer is between you and them</li>
+      <li>We are not responsible for any work performed by installers</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Intellectual property</h2>
+    <p>The calculator, including its design, code, content, and methodology, is our intellectual property or used under licence. You may use the calculator for its intended purpose (estimating heat pump payback) but you may not:</p>
+    <ul>
+      <li>Copy, reproduce, or redistribute the calculator or its code</li>
+      <li>Reverse engineer the calculation methodology for commercial use</li>
+      <li>Use automated tools to scrape data or results from the calculator</li>
+      <li>Present the calculator or its outputs as your own product or service</li>
+    </ul>
+    <p>Your uploaded data (such as bills) and personal information remain yours. We do not claim ownership of any data you provide.</p>
+  </div>
+
+  <div class="card">
+    <h2>Limitation of liability</h2>
+    <p>To the maximum extent permitted by New Zealand law:</p>
+    <ul>
+      <li>We are not liable for any loss or damage arising from your use of the calculator, including any decisions made based on its estimates</li>
+      <li>We are not liable for any issues arising from your dealings with installers or other third parties you connect with through the calculator</li>
+      <li>We are not liable for any inaccuracies in energy pricing data, heat pump performance data, or bill extraction results</li>
+      <li>Our total liability to you for any claim is limited to the amount you paid to use the calculator (which is currently nothing, as the calculator is free)</li>
+    </ul>
+    <p>Nothing in these terms limits or excludes liability that cannot be limited or excluded under New Zealand law, including under the Consumer Guarantees Act 1993 where it applies.</p>
+  </div>
+
+  <div class="card">
+    <h2>Changes to the calculator and these terms</h2>
+    <p>We may update the calculator, its features, or these terms at any time. If we make significant changes to these terms, we will update the date at the top of this page. Continued use of the calculator after changes are made means you accept the updated terms.</p>
+    <p>We may also discontinue the calculator at any time without notice.</p>
+  </div>
+
+  <div class="card">
+    <h2>Governing law</h2>
+    <p>These terms are governed by the laws of New Zealand. Any disputes will be subject to the exclusive jurisdiction of the courts of New Zealand.</p>
+  </div>
+
+  <div class="card">
+    <h2>Privacy</h2>
+    <p>Your use of the calculator is also subject to our <a href="/privacy">Privacy Policy</a>, which explains how we collect, use, and protect your personal information.</p>
+  </div>
+
+  <div class="card">
+    <h2>Contact us</h2>
+    <p>If you have questions about these terms, please contact us:</p>
+    <p><strong>Email:</strong> hello@heatpumpcalculator.co.nz</p>
+  </div>
+</main>
+
+<footer>
+  <a href="/privacy">Privacy Policy</a> &middot; <a href="/terms">Terms of Service</a> &middot; Built for NZ homeowners
+</footer>
+
+</body>
+</html>
