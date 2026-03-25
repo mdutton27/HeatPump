@@ -1589,14 +1589,42 @@ If a field cannot be found, use null. For annualFuelSpend, if you only have a mo
 
 function mergeExtracted(d) {
   const e = state.extracted;
-  const before = JSON.stringify(e);
   if (d.fuelType) e.fuelType = d.fuelType;
-  if (d.annualFuelSpend && (!e.annualFuelSpend || d.confidence === 'high')) e.annualFuelSpend = d.annualFuelSpend;
-  else if (d.monthlyFuelSpend && !e.annualFuelSpend) e.annualFuelSpend = d.monthlyFuelSpend * 12;
+
+  // Aggregate annual fuel spend from ALL processed bills
+  // Each bill contributes its period spend + days; we annualise the total
+  const completedBills = state.bills.filter(b =>
+    (b.status === 'done' || b.status === 'manual-done') && b.data
+  );
+
+  let totalSpend = 0, totalDays = 0;
+  completedBills.forEach(b => {
+    const spend = b.data.monthlyFuelSpend || b.data.annualFuelSpend;
+    const days = b.data.billingPeriodDays || 30;
+    if (spend && spend > 0) {
+      // If the AI returned annualFuelSpend, convert back to period spend
+      const periodSpend = b.data.monthlyFuelSpend || (b.data.annualFuelSpend * days / 365);
+      totalSpend += periodSpend;
+      totalDays += days;
+    }
+  });
+
+  if (totalDays > 0) {
+    const dailyRate = totalSpend / totalDays;
+    e.annualFuelSpend = Math.round(dailyRate * 365);
+    console.log(`[Merge] Annual fuel: $${e.annualFuelSpend} (from ${completedBills.length} bills, ${totalDays} days coverage, $${dailyRate.toFixed(2)}/day)`);
+  } else if (d.annualFuelSpend) {
+    // Fallback: single bill, use its estimate directly
+    e.annualFuelSpend = d.annualFuelSpend;
+  } else if (d.monthlyFuelSpend) {
+    e.annualFuelSpend = d.monthlyFuelSpend * 12;
+  }
+
   if (d.fuelFixedDailyCharge) e.fuelFixedAnnual = (d.fuelFixedDailyCharge / 100) * 365;
+  // Use most recent non-null rates (these don't need aggregation)
   if (d.fuelVariableRate) e.fuelVariableRate = d.fuelVariableRate;
   if (d.elecRatePerKwh) e.elecRate = d.elecRatePerKwh;
-  console.log('[Merge] State after merge:', JSON.stringify(e));
+  console.log('[Merge] State:', JSON.stringify(e));
 }
 
 function updateExtractedDisplay() {
