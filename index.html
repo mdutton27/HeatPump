@@ -1024,12 +1024,12 @@
       <div class="slider-group">
         <div class="slider-header">
           <span class="slider-label">Annual maintenance saving</span>
-          <span class="slider-value" id="maintVal">$600 / yr</span>
+          <span class="slider-value" id="maintVal">$250 / yr</span>
         </div>
-        <input type="range" id="maintSaving" min="0" max="2000" value="600" step="100">
+        <input type="range" id="maintSaving" min="0" max="2000" value="250" step="50">
         <div class="slider-labels">
           <span>$0</span>
-          <span>$600 (typical boiler)</span>
+          <span>$250 (typical boiler)</span>
           <span>$2,000</span>
         </div>
       </div>
@@ -1295,7 +1295,7 @@ const state = {
   assumptions: {
     gasInflate: 6,
     elecInflate: 3,
-    maintSaving: 600,
+    maintSaving: 250,
     modelYears: 25,
     discountRate: 3
   },
@@ -2064,7 +2064,7 @@ function runModel(inputs) {
     const netSaving = gasAnnual - elecAnnual + maintSaving;
     const discount = Math.pow(1 + discountRate, y);
     npvSaving += netSaving / discount;
-    gasCum += gasAnnual;
+    gasCum += gasAnnual + maintSaving;
     hpCum += elecAnnual;
     if (paybackYr === null && hpCum <= gasCum) paybackYr = y;
     gasCumArr.push(Math.round(gasCum));
@@ -2144,7 +2144,8 @@ function buildResults() {
 
   // CO2 (approx)
   const co2FuelPerKwh = inputs.fuelType === 'gas' ? 0.202 : inputs.fuelType === 'lpg' ? 0.239 : inputs.fuelType === 'oil' ? 0.294 : 0.363;
-  const fuelKwhAnnual = inputs.annualFuel / ((state.extracted.fuelVariableRate || 8.78) / 100);
+  const fuelFixedAnnual = state.extracted.fuelFixedAnnual || 0;
+  const fuelKwhAnnual = Math.max(0, inputs.annualFuel - fuelFixedAnnual) / ((state.extracted.fuelVariableRate || 8.78) / 100);
   const co2Fuel = fuelKwhAnnual * co2FuelPerKwh;
   const co2Elec = inputs.annualKwh * 0.136;
   document.getElementById('res-co2').textContent = Math.round(co2Fuel - co2Elec).toLocaleString() + ' kg';
