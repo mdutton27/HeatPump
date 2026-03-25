@@ -1357,9 +1357,23 @@ function enqueueBill(bill) {
   if (!billQueueRunning) runBillQueue();
 }
 
+function showProcessingMsg(text) {
+  document.getElementById('processingMsg').style.display = 'flex';
+  document.getElementById('processingText').textContent = text;
+}
+
+async function countdown(seconds, label) {
+  for (let i = seconds; i > 0; i--) {
+    showProcessingMsg(`${label} — retrying in ${i}s...`);
+    await new Promise(r => setTimeout(r, 1000));
+  }
+}
+
 async function runBillQueue() {
   billQueueRunning = true;
   console.log(`[Queue] Starting queue processor (${billQueue.length} bills)`);
+  let consecutiveFails = 0;
+
   while (billQueue.length > 0) {
     const bill = billQueue.shift();
     // Skip if bill was removed or manually entered while queued
@@ -1367,14 +1381,43 @@ async function runBillQueue() {
       console.log(`[Queue] Skipping ${bill.name} (status: ${bill.status})`);
       continue;
     }
-    const pending = state.bills.filter(b => b.status === 'pending').length;
-    document.getElementById('processingMsg').style.display = 'flex';
-    document.getElementById('processingText').textContent = `Reading ${bill.name}...` + (pending > 0 ? ` (${pending} more queued)` : '');
+    const remaining = billQueue.length;
+    showProcessingMsg(`Reading ${bill.name}...` + (remaining > 0 ? ` (${remaining} more queued)` : ''));
     await processBill(bill);
-    // Brief pause between calls to stay well under rate limits
+
+    if (bill.status === 'error') {
+      consecutiveFails++;
+      // Auto-retry with increasing backoff: 10s, 15s, 20s
+      const maxAutoRetries = 3;
+      let retried = false;
+      for (let r = 0; r < maxAutoRetries; r++) {
+        const waitSec = 10 + (r * 5);
+        console.log(`[Queue] ${bill.name} failed (attempt ${r + 1}/${maxAutoRetries}), waiting ${waitSec}s`);
+        await countdown(waitSec, `${bill.name} failed`);
+        bill.status = 'processing';
+        renderBillList();
+        showProcessingMsg(`Retrying ${bill.name}... (attempt ${r + 2})`);
+        await processBill(bill);
+        if (bill.status === 'done') {
+          consecutiveFails = 0;
+          retried = true;
+          break;
+        }
+      }
+      if (!retried) {
+        console.log(`[Queue] ${bill.name}: giving up after ${maxAutoRetries} retries`);
+        bill.status = 'error';
+        renderBillList();
+      }
+    } else {
+      consecutiveFails = 0;
+    }
+
+    // Pause between bills — longer if we've been hitting limits
     if (billQueue.length > 0) {
-      console.log(`[Queue] Pausing 1.5s before next bill (${billQueue.length} remaining)`);
-      await new Promise(r => setTimeout(r, 1500));
+      const pauseSec = consecutiveFails > 0 ? 5 : 2;
+      console.log(`[Queue] Pausing ${pauseSec}s before next bill (${billQueue.length} remaining)`);
+      await new Promise(r => setTimeout(r, pauseSec * 1000));
     }
   }
   billQueueRunning = false;
