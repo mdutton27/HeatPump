@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Heat Pump Payback Calculator</title>
+<title>Greener Energy Calculator</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
@@ -748,7 +748,7 @@
 
 <header>
   <div class="header-brand">
-    <h1>Heat Pump<br>Payback Calculator</h1>
+    <h1>Greener Energy<br>Calculator</h1>
     <p>New Zealand residential heating analysis</p>
   </div>
   <div class="step-indicator">
@@ -1085,6 +1085,32 @@
       <div class="verdict-banner-body" id="verdict-body">—</div>
     </div>
 
+    <div class="card">
+      <div class="card-title">Adjust assumptions</div>
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">Gas / fuel inflation</span>
+          <span class="slider-value" id="r-gasInflateVal">6%</span>
+        </div>
+        <input type="range" id="r-gasInflate" min="1" max="15" value="6" step="1">
+      </div>
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">Electricity inflation</span>
+          <span class="slider-value" id="r-elecInflateVal">3%</span>
+        </div>
+        <input type="range" id="r-elecInflate" min="1" max="8" value="3" step="1">
+      </div>
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">Months of heating use per year</span>
+          <span class="slider-value" id="r-heatingMonthsVal">4 months</span>
+        </div>
+        <input type="range" id="r-heatingMonths" min="1" max="8" value="5" step="1">
+        <span class="hint" id="r-heatingMonthsHint" style="margin-top:4px; display:block;">Months at high flow temp (W55) for radiators — affects blended COP. Your actual fuel spend stays the same.</span>
+      </div>
+    </div>
+
     <div class="metrics-grid" id="metricsGrid">
       <div class="metric-card">
         <div class="metric-label">Payback year</div>
@@ -1149,32 +1175,6 @@
         </thead>
         <tbody id="scenarioBody"></tbody>
       </table>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Adjust assumptions</div>
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label">Gas / fuel inflation</span>
-          <span class="slider-value" id="r-gasInflateVal">6%</span>
-        </div>
-        <input type="range" id="r-gasInflate" min="1" max="15" value="6" step="1">
-      </div>
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label">Electricity inflation</span>
-          <span class="slider-value" id="r-elecInflateVal">3%</span>
-        </div>
-        <input type="range" id="r-elecInflate" min="1" max="8" value="3" step="1">
-      </div>
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label">Months of heating use per year</span>
-          <span class="slider-value" id="r-heatingMonthsVal">4 months</span>
-        </div>
-        <input type="range" id="r-heatingMonths" min="1" max="8" value="5" step="1">
-        <span class="hint" id="r-heatingMonthsHint" style="margin-top:4px; display:block;">Months at high flow temp (W55) for radiators — affects blended COP. Your actual fuel spend stays the same.</span>
-      </div>
     </div>
 
     <!-- INSTALLER REFERRAL CTA -->
@@ -2279,7 +2279,7 @@ async function downloadPDF() {
   doc.setTextColor(240, 253, 244);
   doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
-  doc.text('Heat Pump Payback Report', M, 18);
+  doc.text('Greener Energy Report', M, 18);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(180, 175, 160);
@@ -2396,7 +2396,7 @@ async function downloadPDF() {
   doc.rect(0, 282, W, 15, 'F');
   doc.setFontSize(8);
   doc.setTextColor(180,175,160);
-  doc.text('Heat Pump Payback Calculator  ·  nz-heatpump-calc  ·  For indicative purposes only', M, 290);
+  doc.text('Greener Energy Calculator  ·  nz-heatpump-calc  ·  For indicative purposes only', M, 290);
   doc.text(new Date().toLocaleDateString('en-NZ'), W-M, 290, { align: 'right' });
 
   doc.save('heat-pump-payback-report.pdf');
